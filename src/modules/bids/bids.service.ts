@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { forwardRef, Inject, Injectable } from '@nestjs/common';
 import { BidsGateway } from './bids.gateway';
 import { Model } from 'mongoose';
 import { Bid } from './schemas/bid.schema';
@@ -11,6 +11,7 @@ export class BidsService {
   constructor(
     @InjectModel(Auction.name) private auctionModel: Model<Auction>,
     @InjectModel(Bid.name) private bidModel: Model<Bid>,
+    @Inject(forwardRef(() => BidsGateway))
     private bidsGateway: BidsGateway,
     private redisService: RedisService,
   ) {}

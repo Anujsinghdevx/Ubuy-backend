@@ -8,6 +8,7 @@ import { UsersModule } from './modules/users/users.module';
 import { AuctionsModule } from './modules/auctions/auctions.module';
 import { BidsModule } from './modules/bids/bids.module';
 import { RedisService } from './common/redis/redis.service';
+import { QueueModule } from './modules/queue/queue.module';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { RedisService } from './common/redis/redis.service';
     }),
     AuthModule,
     UsersModule,
+    QueueModule,
     AuctionsModule,
     BidsModule,
   ],

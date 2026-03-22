@@ -15,8 +15,15 @@ async function bootstrap() {
   );
 
   const redisAdapter = new RedisIoAdapter(app);
-  await redisAdapter.connectToRedis();
-  app.useWebSocketAdapter(redisAdapter);
+  try {
+    await redisAdapter.connectToRedis();
+    app.useWebSocketAdapter(redisAdapter);
+  } catch (error) {
+    Logger.warn(
+      `Redis adapter unavailable. Falling back to default socket adapter. ${error instanceof Error ? error.message : ''}`,
+      'Bootstrap',
+    );
+  }
 
   const port = Number(process.env.PORT ?? 6000);
   await app.listen(port);

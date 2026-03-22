@@ -5,7 +5,7 @@ import {
   MessageBody,
   WebSocketServer,
 } from '@nestjs/websockets';
-import { UseGuards } from '@nestjs/common';
+import { forwardRef, Inject, UseGuards } from '@nestjs/common';
 import { Server, Socket } from 'socket.io';
 
 import { WsJwtGuard } from '../../common/guards/ws-jwt.guard';
@@ -29,7 +29,10 @@ export class BidsGateway {
   @WebSocketServer()
   server: Server;
 
-  constructor(private readonly bidsService: BidsService) {}
+  constructor(
+    @Inject(forwardRef(() => BidsService))
+    private readonly bidsService: BidsService,
+  ) {}
 
   @SubscribeMessage('joinAuction')
   async handleJoinAuction(
