@@ -3,12 +3,13 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { MongooseModule } from '@nestjs/mongoose';
-import { AuthModule } from './modules/auth/auth.module';
-import { UsersModule } from './modules/users/users.module';
-import { AuctionsModule } from './modules/auctions/auctions.module';
-import { BidsModule } from './modules/bids/bids.module';
-import { RedisService } from './common/redis/redis.service';
-import { QueueModule } from './modules/queue/queue.module';
+import { AuthModule } from '@/modules/auth/auth.module';
+import { UsersModule } from '@/modules/users/users.module';
+import { AuctionsModule } from '@/modules/auctions/auctions.module';
+import { BidsModule } from '@/modules/bids/bids.module';
+import { RedisService } from '@/common/redis/redis.service';
+import { QueueModule } from '@/modules/queue/queue.module';
+import { HealthModule } from '@/modules/health/health.module';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { QueueModule } from './modules/queue/queue.module';
     QueueModule,
     AuctionsModule,
     BidsModule,
+    HealthModule,
   ],
   controllers: [AppController],
   providers: [AppService, RedisService],

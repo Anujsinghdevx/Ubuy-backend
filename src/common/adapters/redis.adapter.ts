@@ -1,25 +1,34 @@
 import { IoAdapter } from '@nestjs/platform-socket.io';
 import { createAdapter } from '@socket.io/redis-adapter';
 import { Logger } from '@nestjs/common';
-import Redis from 'ioredis';
+import { ConfigService } from '@nestjs/config';
+import Redis, { RedisOptions } from 'ioredis';
 import { Server, ServerOptions } from 'socket.io';
+import { getRedisOptions } from '@/common/redis/redis.config';
 
 export class RedisIoAdapter extends IoAdapter {
   private readonly logger = new Logger(RedisIoAdapter.name);
   private adapterConstructor: ReturnType<typeof createAdapter>;
+  private readonly redisOptions: RedisOptions;
+
+  constructor(
+    appOrHttpServer: object,
+    private readonly configService: ConfigService,
+  ) {
+    super(appOrHttpServer);
+    this.redisOptions = getRedisOptions(this.configService);
+  }
 
   async connectToRedis(): Promise<void> {
     const pubClient = new Redis({
-      host: '127.0.0.1',
-      port: 6379,
+      ...this.redisOptions,
       lazyConnect: true,
       maxRetriesPerRequest: 1,
       retryStrategy: () => null,
     });
 
     const subClient = new Redis({
-      host: '127.0.0.1',
-      port: 6379,
+      ...this.redisOptions,
       lazyConnect: true,
       maxRetriesPerRequest: 1,
       retryStrategy: () => null,

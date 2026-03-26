@@ -2,7 +2,11 @@ import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Job } from 'bullmq';
 import { Injectable } from '@nestjs/common';
 import { AuctionsService } from './auctions.service';
-import { BidsGateway } from '../bids/bids.gateway';
+import { BidsGateway } from '@/modules/bids/bids.gateway';
+
+type EndAuctionJobData = {
+  auctionId: string;
+};
 
 @Processor('auctionQueue')
 @Injectable()
@@ -14,7 +18,7 @@ export class AuctionProcessor extends WorkerHost {
     super();
   }
 
-  async process(job: Job) {
+  async process(job: Job<EndAuctionJobData>) {
     if (job.name === 'endAuction') {
       const { auctionId } = job.data;
 

@@ -4,7 +4,7 @@ import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import {
   AuthenticatedUser,
   CurrentUser,
-} from '../../common/decorators/current-user.decorator';
+} from '@/common/decorators/current-user.decorator';
 import { SignupDto } from './dto/signup.dto';
 import { LoginDto } from './dto/login.dto';
 import { VerifyEmailDto } from './dto/verify-email.dto';

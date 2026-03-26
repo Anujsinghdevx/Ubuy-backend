@@ -9,11 +9,11 @@ import {
 } from '@nestjs/common';
 import { AuctionsService } from './auctions.service';
 import { CreateAuctionDto } from './dto/create-auction.dto';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { JwtAuthGuard } from '@/modules/auth/guards/jwt-auth.guard';
 import {
   AuthenticatedUser,
   CurrentUser,
-} from '../../common/decorators/current-user.decorator';
+} from '@/common/decorators/current-user.decorator';
 
 @Controller('auctions')
 export class AuctionsController {

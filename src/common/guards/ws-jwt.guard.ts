@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { Socket } from 'socket.io';
-import { AuthenticatedUser } from '../decorators/current-user.decorator';
+import { AuthenticatedUser } from '@/common/decorators/current-user.decorator';
 
 type WsSocketData = {
   user?: AuthenticatedUser;
@@ -31,15 +31,23 @@ export class WsJwtGuard implements CanActivate {
   canActivate(context: ExecutionContext): boolean {
     const client = context.switchToWs().getClient<AuthenticatedSocket>();
     const authToken: unknown = client.handshake.auth?.token;
+    const queryToken: unknown = client.handshake.query?.token;
     const bearerToken: unknown =
       client.handshake.headers.authorization?.split(' ')[1];
+
+    const normalizedQueryToken =
+      typeof queryToken === 'string'
+        ? queryToken
+        : Array.isArray(queryToken) && typeof queryToken[0] === 'string'
+          ? queryToken[0]
+          : undefined;
 
     const token =
       typeof authToken === 'string'
         ? authToken
         : typeof bearerToken === 'string'
           ? bearerToken
-          : undefined;
+          : normalizedQueryToken;
 
     if (!token) {
       throw new UnauthorizedException('No token provided');

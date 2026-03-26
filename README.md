@@ -5,7 +5,7 @@ A scalable, production-ready backend for **Ubuy** - a real-time auction platform
 ---
 
 ## Overview
-Real-time auction system with live bidding, user management, and scalable architecture.
+Real-time auction system with live bidding, user management, queue-based auction ending, and health monitoring.
 
 ---
 
@@ -13,7 +13,8 @@ Real-time auction system with live bidding, user management, and scalable archit
 - Node.js, NestJS, TypeScript
 - MongoDB
 - Socket.IO
-- Redis (planned)
+- Redis (ioredis + Socket.IO Redis adapter)
+- BullMQ (auction lifecycle jobs)
 
 ---
 
@@ -72,6 +73,14 @@ timestamp: Date
 - Role-based authorization
 - Real-time bidding
 - Auction lifecycle management
+- Health checkpoint endpoint for backend, MongoDB, Redis, config, and memory
+
+---
+
+## Current Status
+- Implemented modules: Auth, Users, Auctions, Bids, Queue, Health
+- Root endpoint (`GET /`) returns runtime service status
+- Health endpoint (`GET /health`) returns dependency checks and readiness
 
 ---
 
@@ -113,11 +122,26 @@ npm run start:dev
 
 ---
 
+## API Quick Check
+- `GET /` -> service runtime status
+- `GET /health` -> backend, MongoDB, Redis, config, memory checks
+- `POST /auth/signup`
+- `POST /auth/login`
+- `POST /auth/verify-email`
+- `GET /auth/me` (JWT required)
+- `POST /auctions` (JWT required)
+- `GET /auctions`
+- `GET /auctions/active`
+- `GET /auctions/:id`
+
+---
+
 ## WebSocket Events
-- join-auction
+- joinAuction
+- leaveAuction
 - place-bid
-- bid-updated
-- auction-ended
+- newBid
+- auctionEnded
 
 ---
 

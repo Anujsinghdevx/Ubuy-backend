@@ -3,6 +3,12 @@ import { Document } from 'mongoose';
 
 export type AuctionDocument = Auction & Document;
 
+export const AUCTION_STATUS = ['ACTIVE', 'ENDED'] as const;
+export type AuctionStatus = (typeof AUCTION_STATUS)[number];
+
+export const PAYMENT_STATUS = ['PAID', 'ACTIVE'] as const;
+export type PaymentStatus = (typeof PAYMENT_STATUS)[number];
+
 @Schema({ timestamps: true })
 export class Auction {
   @Prop({ required: true })
@@ -20,8 +26,8 @@ export class Auction {
   @Prop({ required: true })
   currentPrice: number;
 
-  @Prop({ enum: ['ACTIVE', 'ENDED'], default: 'ACTIVE' })
-  status: string;
+  @Prop({ enum: AUCTION_STATUS, default: 'ACTIVE' })
+  status: AuctionStatus;
 
   @Prop({ required: true })
   startTime: Date;
@@ -36,7 +42,7 @@ export class Auction {
   createdBy: string;
 
   @Prop()
-  highestBidder: string;
+  highestBidder?: string;
 
   @Prop()
   winner?: string;
@@ -44,8 +50,8 @@ export class Auction {
   @Prop({ default: false })
   notified: boolean;
 
-  @Prop({ enum: ['PAID', 'ACTIVE'], default: 'ACTIVE' })
-  paymentStatus: string;
+  @Prop({ enum: PAYMENT_STATUS, default: 'ACTIVE' })
+  paymentStatus: PaymentStatus;
 }
 
 export const AuctionSchema = SchemaFactory.createForClass(Auction);

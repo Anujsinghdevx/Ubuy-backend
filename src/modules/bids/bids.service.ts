@@ -2,9 +2,9 @@ import { forwardRef, Inject, Injectable } from '@nestjs/common';
 import { BidsGateway } from './bids.gateway';
 import { Model } from 'mongoose';
 import { Bid } from './schemas/bid.schema';
-import { Auction } from '../auctions/schemas/auction.schema';
+import { Auction } from '@/modules/auctions/schemas/auction.schema';
 import { InjectModel } from '@nestjs/mongoose';
-import { RedisService } from 'src/common/redis/redis.service';
+import { RedisService } from '@/common/redis/redis.service';
 
 @Injectable()
 export class BidsService {
@@ -28,9 +28,26 @@ export class BidsService {
     }
 
     try {
+      const currentAuction = await this.auctionModel.findById(auctionId);
+
+      if (!currentAuction) {
+        throw new Error('Auction not found');
+      }
+
+      if (currentAuction.status !== 'ACTIVE') {
+        throw new Error('Auction is not active');
+      }
+
+      if (amount <= currentAuction.currentPrice) {
+        throw new Error(
+          `Bid must be greater than current price (${currentAuction.currentPrice})`,
+        );
+      }
+
       const updatedAuction = await this.auctionModel.findOneAndUpdate(
         {
           _id: auctionId,
+          status: 'ACTIVE',
           currentPrice: { $lt: amount },
         },
         {
@@ -43,7 +60,7 @@ export class BidsService {
       );
 
       if (!updatedAuction) {
-        throw new Error('Bid too low or lost race');
+        throw new Error('Another higher bid was already placed. Try a higher amount');
       }
 
       await this.bidModel.create({

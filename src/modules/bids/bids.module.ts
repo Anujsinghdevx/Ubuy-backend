@@ -2,11 +2,14 @@ import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { BidsGateway } from './bids.gateway';
 import { BidsService } from './bids.service';
-import { Bid, BidSchema } from './schemas/bid.schema.js';
-import { Auction, AuctionSchema } from '../auctions/schemas/auction.schema';
-import { RedisService } from 'src/common/redis/redis.service';
-import { AuthModule } from '../auth/auth.module';
-import { WsJwtGuard } from 'src/common/guards/ws-jwt.guard';
+import { Bid, BidSchema } from '@/modules/bids/schemas/bid.schema';
+import {
+  Auction,
+  AuctionSchema,
+} from '@/modules/auctions/schemas/auction.schema';
+import { RedisService } from '@/common/redis/redis.service';
+import { AuthModule } from '@/modules/auth/auth.module';
+import { WsJwtGuard } from '@/common/guards/ws-jwt.guard';
 
 @Module({
   imports: [

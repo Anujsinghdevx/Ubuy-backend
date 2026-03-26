@@ -4,13 +4,14 @@ import {
   ConnectedSocket,
   MessageBody,
   WebSocketServer,
+  WsException,
 } from '@nestjs/websockets';
 import { forwardRef, Inject, UseGuards } from '@nestjs/common';
 import { Server, Socket } from 'socket.io';
 
-import { WsJwtGuard } from '../../common/guards/ws-jwt.guard';
+import { WsJwtGuard } from '@/common/guards/ws-jwt.guard';
 import { BidsService } from './bids.service';
-import { AuthenticatedUser } from '../../common/decorators/current-user.decorator';
+import { AuthenticatedUser } from '@/common/decorators/current-user.decorator';
 
 type AuthenticatedSocket = Socket<
   Record<string, never>,
@@ -62,15 +63,29 @@ export class BidsGateway {
     const user = client.data.user;
 
     if (!user) {
-      throw new Error('Unauthorized user');
+      throw new WsException('Unauthorized user');
     }
 
-    const auction = await this.bidsService.placeBid(
-      user.userId,
-      data.auctionId,
-      data.amount,
-    );
+    if (!data || typeof data.auctionId !== 'string') {
+      throw new WsException('auctionId is required');
+    }
 
-    return auction;
+    if (typeof data.amount !== 'number' || data.amount <= 0) {
+      throw new WsException('amount must be a number greater than 0');
+    }
+
+    try {
+      const auction = await this.bidsService.placeBid(
+        user.userId,
+        data.auctionId,
+        data.amount,
+      );
+
+      return auction;
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'Failed to place bid';
+      throw new WsException(message);
+    }
   }
 }
