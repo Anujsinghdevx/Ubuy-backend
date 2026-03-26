@@ -42,6 +42,12 @@ export class AuctionsController {
     return this.auctionsService.findActive();
   }
 
+  @UseGuards(JwtAuthGuard)
+  @Get('queue/status')
+  async getQueueStatus() {
+    return this.auctionsService.getQueueStatus();
+  }
+
   @Get(':id')
   async getById(@Param('id') id: string) {
     return this.auctionsService.findById(id);

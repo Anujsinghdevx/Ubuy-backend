@@ -4,7 +4,7 @@ import { Auction, AuctionDocument } from './schemas/auction.schema';
 import { Model } from 'mongoose';
 import { CreateAuctionDto } from './dto/create-auction.dto';
 import { InjectQueue } from '@nestjs/bullmq';
-import { Queue } from 'bullmq';
+import { Job, Queue } from 'bullmq';
 
 @Injectable()
 export class AuctionsService {
@@ -34,7 +34,10 @@ export class AuctionsService {
       await this.auctionQueue.add(
         'endAuction',
         { auctionId: String(auction._id) },
-        { delay },
+        {
+          delay,
+          jobId: `endAuction:${String(auction._id)}`,
+        },
       );
     } catch (error) {
       this.logger.warn(
@@ -57,6 +60,53 @@ export class AuctionsService {
     await auction.save();
 
     return auction;
+  }
+
+  async markAuctionNotified(auctionId: string) {
+    await this.auctionModel.findByIdAndUpdate(auctionId, {
+      $set: { notified: true },
+    });
+  }
+
+  async getQueueStatus() {
+    const counts = await this.auctionQueue.getJobCounts(
+      'waiting',
+      'active',
+      'delayed',
+      'completed',
+      'failed',
+    );
+
+    const [failed, delayed, waiting, active] = await Promise.all([
+      this.auctionQueue.getJobs(['failed'], 0, 9, false),
+      this.auctionQueue.getJobs(['delayed'], 0, 9, false),
+      this.auctionQueue.getJobs(['waiting'], 0, 9, false),
+      this.auctionQueue.getJobs(['active'], 0, 9, false),
+    ]);
+
+    const mapJob = (job: Job) => ({
+      id: job.id,
+      name: job.name,
+      data: job.data,
+      attemptsMade: job.attemptsMade,
+      maxAttempts: job.opts.attempts ?? 1,
+      failedReason: job.failedReason,
+      delay: job.delay,
+      timestamp: job.timestamp,
+      processedOn: job.processedOn,
+      finishedOn: job.finishedOn,
+    });
+
+    return {
+      queue: 'auctionQueue',
+      counts,
+      sample: {
+        failed: failed.map(mapJob),
+        delayed: delayed.map(mapJob),
+        waiting: waiting.map(mapJob),
+        active: active.map(mapJob),
+      },
+    };
   }
 
   async findAll() {

@@ -12,6 +12,15 @@ import { BidsModule } from '@/modules/bids/bids.module';
     MongooseModule.forFeature([{ name: Auction.name, schema: AuctionSchema }]),
     BullModule.registerQueue({
       name: 'auctionQueue',
+      defaultJobOptions: {
+        attempts: 5,
+        backoff: {
+          type: 'exponential',
+          delay: 5000,
+        },
+        removeOnComplete: true,
+        removeOnFail: 100,
+      },
     }),
     BidsModule,
   ],
