@@ -5,8 +5,9 @@ import {
   MessageBody,
   WebSocketServer,
   WsException,
+  Ack,
 } from '@nestjs/websockets';
-import { forwardRef, Inject, UseGuards } from '@nestjs/common';
+import { Logger, forwardRef, Inject, UseGuards } from '@nestjs/common';
 import { Server, Socket } from 'socket.io';
 
 import { WsJwtGuard } from '@/common/guards/ws-jwt.guard';
@@ -27,6 +28,8 @@ type AuthenticatedSocket = Socket<
   cors: true,
 })
 export class BidsGateway {
+  private readonly logger = new Logger(BidsGateway.name);
+
   @WebSocketServer()
   server: Server;
 
@@ -37,9 +40,22 @@ export class BidsGateway {
 
   @SubscribeMessage('joinAuction')
   async handleJoinAuction(
-    @MessageBody() auctionId: string,
+    @MessageBody() payload: string | { auctionId?: string },
     @ConnectedSocket() client: AuthenticatedSocket,
   ) {
+    const auctionId =
+      typeof payload === 'string' ? payload : payload?.auctionId ?? '';
+
+    if (!auctionId) {
+      throw new WsException('auctionId is required');
+    }
+
+    const user = client.data.user;
+
+    if (user?.userId) {
+      await client.join(`user:${user.userId}`);
+    }
+
     await client.join(auctionId);
 
     return { message: `Joined auction ${auctionId}` };
@@ -47,9 +63,16 @@ export class BidsGateway {
 
   @SubscribeMessage('leaveAuction')
   async handleLeaveAuction(
-    @MessageBody() auctionId: string,
+    @MessageBody() payload: string | { auctionId?: string },
     @ConnectedSocket() client: AuthenticatedSocket,
   ) {
+    const auctionId =
+      typeof payload === 'string' ? payload : payload?.auctionId ?? '';
+
+    if (!auctionId) {
+      throw new WsException('auctionId is required');
+    }
+
     await client.leave(auctionId);
 
     return { message: `Left auction ${auctionId}` };
@@ -58,33 +81,81 @@ export class BidsGateway {
   @SubscribeMessage('placeBid')
   async handlePlaceBid(
     @ConnectedSocket() client: AuthenticatedSocket,
-    @MessageBody() data: { auctionId: string; amount: number },
+    @MessageBody()
+    data: { auctionId?: string; amount?: number | string } | undefined,
+    @Ack() ack?: (response: unknown) => void,
   ) {
     const user = client.data.user;
 
     if (!user) {
-      throw new WsException('Unauthorized user');
+      const message = 'Unauthorized user';
+
+      if (ack) {
+        ack({ ok: false, error: message });
+        return;
+      }
+
+      throw new WsException(message);
     }
 
-    if (!data || typeof data.auctionId !== 'string') {
-      throw new WsException('auctionId is required');
+    const auctionId = typeof data?.auctionId === 'string' ? data.auctionId : '';
+    const normalizedAmount =
+      typeof data?.amount === 'number'
+        ? data.amount
+        : typeof data?.amount === 'string'
+          ? Number(data.amount)
+          : Number.NaN;
+
+    if (!auctionId) {
+      const message = 'auctionId is required';
+
+      if (ack) {
+        ack({ ok: false, error: message });
+        return;
+      }
+
+      throw new WsException(message);
     }
 
-    if (typeof data.amount !== 'number' || data.amount <= 0) {
-      throw new WsException('amount must be a number greater than 0');
+    if (!Number.isFinite(normalizedAmount) || normalizedAmount <= 0) {
+      const message = 'amount must be a number greater than 0';
+
+      if (ack) {
+        ack({ ok: false, error: message });
+        return;
+      }
+
+      throw new WsException(message);
     }
 
     try {
       const auction = await this.bidsService.placeBid(
         user.userId,
-        data.auctionId,
-        data.amount,
+        auctionId,
+        normalizedAmount,
       );
 
-      return auction;
+      const response = { ok: true, data: auction };
+
+      if (ack) {
+        ack(response);
+        return;
+      }
+
+      return response;
     } catch (error) {
       const message =
         error instanceof Error ? error.message : 'Failed to place bid';
+
+      this.logger.warn(
+        `Bid rejected for auction ${auctionId}: ${message} (user ${user.userId})`,
+      );
+
+      if (ack) {
+        ack({ ok: false, error: message });
+        return;
+      }
+
       throw new WsException(message);
     }
   }

@@ -8,9 +8,23 @@ import { BullMQAdapter } from '@bull-board/api/bullMQAdapter';
 import { ExpressAdapter } from '@bull-board/express';
 import { getQueueToken } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
+import rateLimit from 'express-rate-limit';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  const expressApp = app.getHttpAdapter().getInstance();
+
+  expressApp.set('trust proxy', 1);
+
+  const uploadRateLimiter = rateLimit({
+    windowMs: 1 * 60 * 1000,
+    max: 5,
+    message: 'Too many uploads from this IP, please try again later.',
+    standardHeaders: true,
+    legacyHeaders: false,
+  });
+
+  app.use('/uploads/images', uploadRateLimiter);
 
   app.useGlobalPipes(
     new ValidationPipe({

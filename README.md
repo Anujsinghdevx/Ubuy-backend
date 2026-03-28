@@ -60,11 +60,11 @@ timestamp: Date
 ```
 
 ### Bid Flow
-1. User emits `place-bid`
+1. User emits `placeBid`
 2. Validate bid > currentBid
 3. Save bid in DB
 4. Update auction
-5. Emit `bid-updated` via WebSocket
+5. Emit `newBid` via WebSocket
 
 ---
 
@@ -139,7 +139,7 @@ npm run start:dev
 ## WebSocket Events
 - joinAuction
 - leaveAuction
-- place-bid
+- placeBid
 - newBid
 - auctionEnded
 

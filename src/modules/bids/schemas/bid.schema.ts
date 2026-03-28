@@ -18,3 +18,6 @@ export class Bid {
 export const BidSchema = SchemaFactory.createForClass(Bid);
 
 BidSchema.index({ auctionId: 1, createdAt: -1 });
+BidSchema.index({ auctionId: 1, amount: -1, createdAt: 1 });
+BidSchema.index({ userId: 1, createdAt: -1 });
+BidSchema.index({ userId: 1, auctionId: 1 });

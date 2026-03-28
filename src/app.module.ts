@@ -10,6 +10,9 @@ import { BidsModule } from '@/modules/bids/bids.module';
 import { RedisService } from '@/common/redis/redis.service';
 import { QueueModule } from '@/modules/queue/queue.module';
 import { HealthModule } from '@/modules/health/health.module';
+import { NotificationsModule } from '@/modules/notifications/notifications.module';
+import { PaymentsModule } from '@/modules/payments/payments.module';
+import { UploadsModule } from '@/modules/uploads/uploads.module';
 
 @Module({
   imports: [
@@ -29,6 +32,9 @@ import { HealthModule } from '@/modules/health/health.module';
     QueueModule,
     AuctionsModule,
     BidsModule,
+    NotificationsModule,
+    PaymentsModule,
+    UploadsModule,
     HealthModule,
   ],
   controllers: [AppController],

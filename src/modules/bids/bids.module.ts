@@ -10,10 +10,12 @@ import {
 import { RedisService } from '@/common/redis/redis.service';
 import { AuthModule } from '@/modules/auth/auth.module';
 import { WsJwtGuard } from '@/common/guards/ws-jwt.guard';
+import { NotificationsModule } from '@/modules/notifications/notifications.module';
 
 @Module({
   imports: [
     AuthModule,
+    NotificationsModule,
     MongooseModule.forFeature([
       { name: Bid.name, schema: BidSchema },
       { name: Auction.name, schema: AuctionSchema },

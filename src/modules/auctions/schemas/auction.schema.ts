@@ -3,11 +3,18 @@ import { Document } from 'mongoose';
 
 export type AuctionDocument = Auction & Document;
 
-export const AUCTION_STATUS = ['ACTIVE', 'ENDED'] as const;
+export const AUCTION_STATUS = ['ACTIVE', 'ENDED', 'CANCELLED'] as const;
 export type AuctionStatus = (typeof AUCTION_STATUS)[number];
 
 export const PAYMENT_STATUS = ['PAID', 'ACTIVE'] as const;
 export type PaymentStatus = (typeof PAYMENT_STATUS)[number];
+
+type WinnerHistoryEntry = {
+  userId: string;
+  amount: number;
+  reason: string;
+  changedAt: Date;
+};
 
 @Schema({ timestamps: true })
 export class Auction {
@@ -52,6 +59,22 @@ export class Auction {
 
   @Prop({ enum: PAYMENT_STATUS, default: 'ACTIVE' })
   paymentStatus: PaymentStatus;
+
+  @Prop()
+  paymentDueAt?: Date;
+
+  @Prop({
+    type: [
+      {
+        userId: { type: String, required: true },
+        amount: { type: Number, required: true },
+        reason: { type: String, required: true },
+        changedAt: { type: Date, required: true },
+      },
+    ],
+    default: [],
+  })
+  winnerHistory: WinnerHistoryEntry[];
 }
 
 export const AuctionSchema = SchemaFactory.createForClass(Auction);
@@ -59,3 +82,6 @@ export const AuctionSchema = SchemaFactory.createForClass(Auction);
 AuctionSchema.index({ status: 1 });
 AuctionSchema.index({ endTime: 1 });
 AuctionSchema.index({ category: 1 });
+AuctionSchema.index({ winner: 1, paymentStatus: 1 });
+AuctionSchema.index({ paymentDueAt: 1 });
+AuctionSchema.index({ status: 1, paymentStatus: 1, paymentDueAt: 1 });

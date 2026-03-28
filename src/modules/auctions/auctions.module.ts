@@ -6,10 +6,15 @@ import { AuctionsController } from './auctions.controller';
 import { Auction, AuctionSchema } from './schemas/auction.schema';
 import { AuctionProcessor } from './auction.processor';
 import { BidsModule } from '@/modules/bids/bids.module';
+import { NotificationsModule } from '@/modules/notifications/notifications.module';
+import { Bid, BidSchema } from '@/modules/bids/schemas/bid.schema';
 
 @Module({
   imports: [
-    MongooseModule.forFeature([{ name: Auction.name, schema: AuctionSchema }]),
+    MongooseModule.forFeature([
+      { name: Auction.name, schema: AuctionSchema },
+      { name: Bid.name, schema: BidSchema },
+    ]),
     BullModule.registerQueue({
       name: 'auctionQueue',
       defaultJobOptions: {
@@ -23,6 +28,7 @@ import { BidsModule } from '@/modules/bids/bids.module';
       },
     }),
     BidsModule,
+    NotificationsModule,
   ],
   controllers: [AuctionsController],
   providers: [AuctionsService, AuctionProcessor],
