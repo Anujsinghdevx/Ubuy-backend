@@ -8,6 +8,7 @@ import {
 import { SignupDto } from './dto/signup.dto';
 import { LoginDto } from './dto/login.dto';
 import { VerifyEmailDto } from './dto/verify-email.dto';
+import { GoogleAuthDto } from './dto/google-auth.dto';
 
 @Controller('auth')
 export class AuthController {
@@ -23,6 +24,11 @@ export class AuthController {
   async login(@Body() body: LoginDto) {
     const { email, password } = body;
     return this.authService.login(email, password);
+  }
+
+  @Post('google')
+  async googleAuth(@Body() body: GoogleAuthDto) {
+    return this.authService.googleAuth(body.idToken);
   }
 
   @Post('verify-email')

@@ -14,6 +14,17 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   const expressApp = app.getHttpAdapter().getInstance();
 
+  app.enableCors({
+    origin: [
+      'http://localhost:3000',
+      'http://127.0.0.1:3000',
+      'http://localhost:5500',
+      'http://127.0.0.1:5500',
+    ],
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+  });
+
   expressApp.set('trust proxy', 1);
 
   const uploadRateLimiter = rateLimit({

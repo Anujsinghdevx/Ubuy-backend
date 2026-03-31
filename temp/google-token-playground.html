@@ -1,0 +1,243 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Google idToken Playground</title>
+    <style>
+      :root {
+        color-scheme: light;
+        font-family: Segoe UI, sans-serif;
+      }
+
+      body {
+        margin: 0;
+        background: #f7f9fc;
+        color: #1d2a3a;
+      }
+
+      .wrap {
+        max-width: 860px;
+        margin: 32px auto;
+        padding: 24px;
+        background: #ffffff;
+        border: 1px solid #dbe4ee;
+        border-radius: 12px;
+        box-shadow: 0 10px 24px rgba(14, 28, 44, 0.08);
+      }
+
+      h1 {
+        margin: 0 0 12px;
+        font-size: 24px;
+      }
+
+      p {
+        margin: 0 0 16px;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 12px;
+      }
+
+      label {
+        font-weight: 600;
+        font-size: 14px;
+      }
+
+      input,
+      textarea,
+      button {
+        width: 100%;
+        box-sizing: border-box;
+        border-radius: 8px;
+        border: 1px solid #c7d2de;
+        padding: 10px 12px;
+        font-size: 14px;
+      }
+
+      textarea {
+        min-height: 140px;
+        resize: vertical;
+        font-family: Consolas, monospace;
+      }
+
+      .row {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+      }
+
+      .btn {
+        cursor: pointer;
+        background: #0a5cd1;
+        color: #fff;
+        border: 1px solid #0849a6;
+      }
+
+      .btn.secondary {
+        background: #f3f7ff;
+        color: #0a5cd1;
+      }
+
+      .status {
+        margin-top: 10px;
+        padding: 10px;
+        border-radius: 8px;
+        background: #f3f7ff;
+        border: 1px solid #d7e4ff;
+        font-size: 13px;
+        white-space: pre-wrap;
+      }
+
+      .warning {
+        margin-top: 14px;
+        background: #fff8e8;
+        border: 1px solid #ffe0a4;
+        color: #5f4309;
+        padding: 10px;
+        border-radius: 8px;
+        font-size: 13px;
+      }
+
+      #googleBtn {
+        margin-top: 8px;
+      }
+    </style>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+  </head>
+  <body>
+    <div class="wrap">
+      <h1>Google idToken Playground</h1>
+      <p>Use this temporary page to generate a Google idToken and test your backend /auth/google endpoint.</p>
+
+      <div class="grid">
+        <div>
+          <label for="clientId">Google Client ID</label>
+          <input id="clientId" placeholder="Paste GOOGLE_CLIENT_ID" />
+        </div>
+
+        <div>
+          <label for="apiBase">Backend Base URL</label>
+          <input id="apiBase" value="http://localhost:8080" />
+        </div>
+
+        <div class="row">
+          <button id="initBtn" class="btn" type="button">Initialize Google Sign-In</button>
+          <button id="copyBtn" class="btn secondary" type="button">Copy idToken</button>
+        </div>
+      </div>
+
+      <div id="googleBtn"></div>
+
+      <div style="margin-top: 12px;">
+        <label for="idToken">Generated idToken</label>
+        <textarea id="idToken" placeholder="Token will appear here"></textarea>
+      </div>
+
+      <div class="row" style="margin-top: 10px;">
+        <button id="testBtn" class="btn" type="button">Test POST /auth/google</button>
+        <button id="clearBtn" class="btn secondary" type="button">Clear</button>
+      </div>
+
+      <div id="status" class="status">Status: waiting...</div>
+
+      <div class="warning">
+        Make sure this origin (for example http://localhost:5500) is added in Google OAuth Authorized JavaScript Origins.
+      </div>
+    </div>
+
+    <script>
+      const clientIdInput = document.getElementById('clientId');
+      const apiBaseInput = document.getElementById('apiBase');
+      const idTokenArea = document.getElementById('idToken');
+      const statusBox = document.getElementById('status');
+      const googleBtn = document.getElementById('googleBtn');
+
+      function setStatus(text) {
+        statusBox.textContent = text;
+      }
+
+      function handleCredentialResponse(response) {
+        idTokenArea.value = response.credential || '';
+        setStatus('idToken generated successfully. You can now test /auth/google.');
+      }
+
+      function initializeGoogle() {
+        const clientId = clientIdInput.value.trim();
+
+        if (!clientId) {
+          setStatus('Please provide Google Client ID first.');
+          return;
+        }
+
+        if (!window.google || !window.google.accounts || !window.google.accounts.id) {
+          setStatus('Google script not loaded yet. Wait a second and retry.');
+          return;
+        }
+
+        googleBtn.innerHTML = '';
+
+        window.google.accounts.id.initialize({
+          client_id: clientId,
+          callback: handleCredentialResponse,
+        });
+
+        window.google.accounts.id.renderButton(googleBtn, {
+          theme: 'outline',
+          size: 'large',
+          shape: 'rectangular',
+          text: 'signin_with',
+        });
+
+        setStatus('Google Sign-In initialized. Click the button to get idToken.');
+      }
+
+      async function testBackend() {
+        const idToken = idTokenArea.value.trim();
+        const apiBase = apiBaseInput.value.trim().replace(/\/$/, '');
+
+        if (!idToken) {
+          setStatus('No idToken found. Generate token first.');
+          return;
+        }
+
+        try {
+          const response = await fetch(`${apiBase}/auth/google`, {
+            method: 'POST',
+            headers: {
+              'content-type': 'application/json',
+            },
+            body: JSON.stringify({ idToken }),
+          });
+
+          const data = await response.json();
+          setStatus(`HTTP ${response.status}\n${JSON.stringify(data, null, 2)}`);
+        } catch (error) {
+          setStatus(`Request failed: ${error && error.message ? error.message : String(error)}`);
+        }
+      }
+
+      function copyToken() {
+        const value = idTokenArea.value.trim();
+        if (!value) {
+          setStatus('Nothing to copy. Generate token first.');
+          return;
+        }
+
+        navigator.clipboard.writeText(value)
+          .then(() => setStatus('idToken copied to clipboard.'))
+          .catch((error) => setStatus(`Copy failed: ${error && error.message ? error.message : String(error)}`));
+      }
+
+      document.getElementById('initBtn').addEventListener('click', initializeGoogle);
+      document.getElementById('testBtn').addEventListener('click', testBackend);
+      document.getElementById('copyBtn').addEventListener('click', copyToken);
+      document.getElementById('clearBtn').addEventListener('click', () => {
+        idTokenArea.value = '';
+        setStatus('Cleared token and status.');
+      });
+    </script>
+  </body>
+</html>
