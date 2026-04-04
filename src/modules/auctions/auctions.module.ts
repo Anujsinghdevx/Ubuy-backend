@@ -9,6 +9,10 @@ import { BidsModule } from '@/modules/bids/bids.module';
 import { NotificationsModule } from '@/modules/notifications/notifications.module';
 import { Bid, BidSchema } from '@/modules/bids/schemas/bid.schema';
 import { User, UserSchema } from '@/modules/users/schemas/user.schema';
+import {
+  Wishlist,
+  WishlistSchema,
+} from '@/modules/wishlist/schemas/wishlist.schema';
 
 @Module({
   imports: [
@@ -16,6 +20,7 @@ import { User, UserSchema } from '@/modules/users/schemas/user.schema';
       { name: Auction.name, schema: AuctionSchema },
       { name: Bid.name, schema: BidSchema },
       { name: User.name, schema: UserSchema },
+      { name: Wishlist.name, schema: WishlistSchema },
     ]),
     BullModule.registerQueue({
       name: 'auctionQueue',

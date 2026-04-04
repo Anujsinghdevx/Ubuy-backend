@@ -5,7 +5,7 @@ import {
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Auction, AuctionDocument } from './schemas/auction.schema';
-import { Model, Types } from 'mongoose';
+import { Model, PipelineStage, Types } from 'mongoose';
 import { CreateAuctionDto } from './dto/create-auction.dto';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Job, Queue } from 'bullmq';
@@ -14,6 +14,7 @@ import { PaymentExpiryDecisionAction } from './dto/payment-expiry-decision.dto';
 import { BidsGateway } from '@/modules/bids/bids.gateway';
 import { NotificationsService } from '@/modules/notifications/notifications.service';
 import { User, UserDocument } from '@/modules/users/schemas/user.schema';
+import { Wishlist, WishlistDocument } from '@/modules/wishlist/schemas/wishlist.schema';
 
 const PAYMENT_REMINDER_DELAY_MS = 12 * 60 * 60 * 1000;
 const PAYMENT_EXPIRY_DELAY_MS = 24 * 60 * 60 * 1000;
@@ -22,6 +23,17 @@ const PAYMENT_EXPIRY_DELAY_MS = 24 * 60 * 60 * 1000;
 export class AuctionsService {
   private readonly logger = new Logger(AuctionsService.name);
 
+  private normalizePagination(page?: number, limit?: number) {
+    const normalizedPage = Math.max(1, page ?? 1);
+    const normalizedLimit = Math.min(100, Math.max(1, limit ?? 20));
+
+    return {
+      page: normalizedPage,
+      limit: normalizedLimit,
+      skip: (normalizedPage - 1) * normalizedLimit,
+    };
+  }
+
   constructor(
     @InjectModel(Auction.name)
     private auctionModel: Model<AuctionDocument>,
@@ -29,10 +41,50 @@ export class AuctionsService {
     private bidModel: Model<BidDocument>,
     @InjectModel(User.name)
     private userModel: Model<UserDocument>,
+    @InjectModel(Wishlist.name)
+    private wishlistModel: Model<WishlistDocument>,
     @InjectQueue('auctionQueue') private auctionQueue: Queue,
     private readonly bidsGateway: BidsGateway,
     private readonly notificationsService: NotificationsService,
   ) {}
+
+  async deleteAuction(auctionId: string, actorUserId: string) {
+    const auction = await this.auctionModel.findById(auctionId);
+
+    if (!auction) {
+      throw new BadRequestException('Auction not found');
+    }
+
+    if (auction.createdBy !== actorUserId) {
+      throw new BadRequestException('Only auction creator can delete auction');
+    }
+
+    if (auction.paymentStatus === 'PAID') {
+      throw new BadRequestException('Paid auction cannot be deleted');
+    }
+
+    await this.removeScheduledEndAuctionJob(auctionId);
+
+    if (auction.winner) {
+      await this.clearWinnerPaymentLifecycleJobs(auctionId, auction.winner);
+    }
+
+    await Promise.all([
+      this.bidModel.deleteMany({ auctionId }),
+      this.wishlistModel.deleteMany({ auctionId }),
+      this.auctionModel.deleteOne({ _id: auctionId }),
+    ]);
+
+    this.bidsGateway.server.to(auctionId).emit('auctionDeleted', {
+      auctionId,
+      deletedBy: actorUserId,
+    });
+
+    return {
+      message: 'Auction deleted successfully',
+      auctionId,
+    };
+  }
 
   async getBidStatsForUser(userId: string) {
     const user = await this.userModel
@@ -570,25 +622,117 @@ export class AuctionsService {
     };
   }
 
-  async findAll() {
-    return this.auctionModel.find().sort({ createdAt: -1 });
+  async findAll(page?: number, limit?: number) {
+    const pagination = this.normalizePagination(page, limit);
+
+    const [data, total] = await Promise.all([
+      this.auctionModel
+        .find()
+        .sort({ createdAt: -1 })
+        .skip(pagination.skip)
+        .limit(pagination.limit),
+      this.auctionModel.countDocuments(),
+    ]);
+
+    return {
+      page: pagination.page,
+      limit: pagination.limit,
+      total,
+      totalPages: Math.ceil(total / pagination.limit),
+      data,
+    };
   }
 
   async findById(id: string) {
     return this.auctionModel.findById(id);
   }
 
-  async findActive() {
-    return this.auctionModel.find({ status: 'ACTIVE' });
+  async findActive(page?: number, limit?: number) {
+    const pagination = this.normalizePagination(page, limit);
+
+    const [data, total] = await Promise.all([
+      this.auctionModel
+        .find({ status: 'ACTIVE' })
+        .sort({ createdAt: -1 })
+        .skip(pagination.skip)
+        .limit(pagination.limit),
+      this.auctionModel.countDocuments({ status: 'ACTIVE' }),
+    ]);
+
+    return {
+      page: pagination.page,
+      limit: pagination.limit,
+      total,
+      totalPages: Math.ceil(total / pagination.limit),
+      data,
+    };
   }
 
-  async findBiddedByUser(userId: string) {
-    const bidSummary = await this.bidModel.aggregate<{
-      _id: string;
-      lastBidAt: Date;
-      highestMyBid: number;
-      lastBidAmount: number;
-    }>([
+  async findByCategory(category: string, page?: number, limit?: number) {
+    const normalizedCategory = category?.trim();
+
+    if (!normalizedCategory) {
+      throw new BadRequestException('Missing category parameter');
+    }
+
+    const pagination = this.normalizePagination(page, limit);
+
+    const [data, total] = await Promise.all([
+      this.auctionModel
+        .find({ category: normalizedCategory })
+        .sort({ endTime: -1 })
+        .skip(pagination.skip)
+        .limit(pagination.limit),
+      this.auctionModel.countDocuments({ category: normalizedCategory }),
+    ]);
+
+    return {
+      page: pagination.page,
+      limit: pagination.limit,
+      total,
+      totalPages: Math.ceil(total / pagination.limit),
+      data,
+    };
+  }
+
+  async findCreatedByUser(userId: string, page?: number, limit?: number) {
+    await this.auctionModel.updateMany(
+      {
+        createdBy: userId,
+        endTime: { $lte: new Date() },
+        status: 'ACTIVE',
+      },
+      {
+        $set: {
+          status: 'ENDED',
+        },
+      },
+    );
+
+    const pagination = this.normalizePagination(page, limit);
+
+    const [data, total] = await Promise.all([
+      this.auctionModel
+        .find({ createdBy: userId })
+        .sort({ createdAt: -1 })
+        .skip(pagination.skip)
+        .limit(pagination.limit),
+      this.auctionModel.countDocuments({ createdBy: userId }),
+    ]);
+
+    return {
+      page: pagination.page,
+      limit: pagination.limit,
+      total,
+      totalPages: Math.ceil(total / pagination.limit),
+      data,
+    };
+  }
+
+  async findBiddedByUser(userId: string, page?: number, limit?: number) {
+    const pagination = this.normalizePagination(page, limit);
+
+    const baseBidPipeline: PipelineStage[] = [
       {
         $match: { userId },
       },
@@ -603,15 +747,43 @@ export class AuctionsService {
           lastBidAmount: { $first: '$amount' },
         },
       },
+    ];
+
+    const [countSummary, bidSummary] = await Promise.all([
+      this.bidModel.aggregate<{ total: number }>([
+        ...baseBidPipeline,
+        {
+          $count: 'total',
+        },
+      ]),
+      this.bidModel.aggregate<{
+      _id: string;
+      lastBidAt: Date;
+      highestMyBid: number;
+      lastBidAmount: number;
+    }>([
+      ...baseBidPipeline,
       {
         $sort: { lastBidAt: -1 },
       },
+      {
+        $skip: pagination.skip,
+      },
+      {
+        $limit: pagination.limit,
+      },
+    ]),
     ]);
+
+    const total = countSummary[0]?.total ?? 0;
 
     if (bidSummary.length === 0) {
       return {
+        page: pagination.page,
+        limit: pagination.limit,
+        total,
+        totalPages: Math.ceil(total / pagination.limit),
         biddedAuctions: [],
-        total: 0,
       };
     }
 
@@ -684,8 +856,11 @@ export class AuctionsService {
       .filter((item): item is NonNullable<typeof item> => item !== null);
 
     return {
+      page: pagination.page,
+      limit: pagination.limit,
+      total,
+      totalPages: Math.ceil(total / pagination.limit),
       biddedAuctions,
-      total: biddedAuctions.length,
     };
   }
 }

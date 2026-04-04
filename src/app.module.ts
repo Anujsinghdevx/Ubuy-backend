@@ -13,6 +13,7 @@ import { HealthModule } from '@/modules/health/health.module';
 import { NotificationsModule } from '@/modules/notifications/notifications.module';
 import { PaymentsModule } from '@/modules/payments/payments.module';
 import { UploadsModule } from '@/modules/uploads/uploads.module';
+import { WishlistModule } from '@/modules/wishlist/wishlist.module';
 
 @Module({
   imports: [
@@ -35,6 +36,7 @@ import { UploadsModule } from '@/modules/uploads/uploads.module';
     NotificationsModule,
     PaymentsModule,
     UploadsModule,
+    WishlistModule,
     HealthModule,
   ],
   controllers: [AppController],

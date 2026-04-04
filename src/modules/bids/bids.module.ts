@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { BidsGateway } from './bids.gateway';
 import { BidsService } from './bids.service';
@@ -15,7 +15,7 @@ import { User, UserSchema } from '@/modules/users/schemas/user.schema';
 
 @Module({
   imports: [
-    AuthModule,
+    forwardRef(() => AuthModule),
     NotificationsModule,
     MongooseModule.forFeature([
       { name: Bid.name, schema: BidSchema },

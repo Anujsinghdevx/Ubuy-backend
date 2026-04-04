@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
 import { AuthService } from './auth.service';
@@ -28,7 +28,7 @@ import { Bid, BidSchema } from '@/modules/bids/schemas/bid.schema';
         };
       },
     }),
-    UsersModule,
+    forwardRef(() => UsersModule),
     MongooseModule.forFeature([
       { name: Auction.name, schema: AuctionSchema },
       { name: Bid.name, schema: BidSchema },

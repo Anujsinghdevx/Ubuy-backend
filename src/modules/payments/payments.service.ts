@@ -365,4 +365,17 @@ export class PaymentsService {
       data,
     };
   }
+
+  async notifyPaymentForAuction(
+    actorUserId: string,
+    auctionId: string,
+    customerPhone?: string,
+  ) {
+    const normalizedPhone = customerPhone?.trim() || '9999999999';
+
+    return this.createCashfreePaymentLink(actorUserId, {
+      auctionId,
+      customerPhone: normalizedPhone,
+    });
+  }
 }

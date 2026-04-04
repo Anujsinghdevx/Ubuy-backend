@@ -151,4 +151,35 @@ export class NotificationsService {
       updatedCount: result.modifiedCount,
     };
   }
+
+  async deleteAllNotifications(userId: string) {
+    const result = await this.notificationModel.deleteMany({ userId });
+
+    return {
+      deletedCount: result.deletedCount,
+    };
+  }
+
+  async deleteReadNotifications(userId: string) {
+    const result = await this.notificationModel.deleteMany({
+      userId,
+      isRead: true,
+    });
+
+    return {
+      deletedCount: result.deletedCount,
+    };
+  }
+
+  async deleteNotification(userId: string, notificationId: string) {
+    const deleted = await this.notificationModel.findOneAndDelete({
+      _id: notificationId,
+      userId,
+    });
+
+    return {
+      deleted: Boolean(deleted),
+      notificationId,
+    };
+  }
 }

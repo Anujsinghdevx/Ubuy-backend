@@ -1,5 +1,6 @@
 import {
   Controller,
+  Delete,
   Get,
   Patch,
   Param,
@@ -93,5 +94,45 @@ export class NotificationsController {
     }
 
     return this.notificationsService.markAllAsRead(user.userId);
+  }
+
+  @ApiOperation({ summary: 'Delete all read notifications' })
+  @ApiResponse({ status: 200, description: 'Read notifications deleted', example: { deletedCount: 4 } })
+  @Delete('read')
+  async deleteReadNotifications(
+    @CurrentUser() user: AuthenticatedUser | undefined,
+  ) {
+    if (!user) {
+      throw new UnauthorizedException('User not authenticated');
+    }
+
+    return this.notificationsService.deleteReadNotifications(user.userId);
+  }
+
+  @ApiOperation({ summary: 'Delete all notifications for authenticated user' })
+  @ApiResponse({ status: 200, description: 'All notifications deleted', example: { deletedCount: 12 } })
+  @Delete()
+  async deleteAllNotifications(
+    @CurrentUser() user: AuthenticatedUser | undefined,
+  ) {
+    if (!user) {
+      throw new UnauthorizedException('User not authenticated');
+    }
+
+    return this.notificationsService.deleteAllNotifications(user.userId);
+  }
+
+  @ApiOperation({ summary: 'Delete one notification' })
+  @ApiResponse({ status: 200, description: 'Notification deleted', example: { deleted: true, notificationId: '507f1f77bcf86cd799439011' } })
+  @Delete(':id')
+  async deleteNotification(
+    @CurrentUser() user: AuthenticatedUser | undefined,
+    @Param('id') notificationId: string,
+  ) {
+    if (!user) {
+      throw new UnauthorizedException('User not authenticated');
+    }
+
+    return this.notificationsService.deleteNotification(user.userId, notificationId);
   }
 }
