@@ -17,12 +17,17 @@ import {
   NOTIFICATION_TYPES,
   NotificationType,
 } from './schemas/notification.schema';
+import { ApiBearerAuth, ApiOperation, ApiTags, ApiResponse } from '@nestjs/swagger';
 
+@ApiTags('notifications')
+@ApiBearerAuth()
 @Controller('notifications')
 @UseGuards(JwtAuthGuard)
 export class NotificationsController {
   constructor(private readonly notificationsService: NotificationsService) {}
 
+  @ApiOperation({ summary: 'List notifications for authenticated user' })
+  @ApiResponse({ status: 200, description: 'Notifications list', example: { data: [{ id: '507f1f77bcf86cd799439011', message: 'Your bid was outbid', isRead: false, type: 'bid', timestamp: '2026-04-04T10:30:00Z' }], total: 5 } })
   @Get()
   async list(
     @CurrentUser() user: AuthenticatedUser | undefined,
@@ -54,6 +59,8 @@ export class NotificationsController {
     });
   }
 
+  @ApiOperation({ summary: 'Get unread notifications count' })
+  @ApiResponse({ status: 200, description: 'Unread count', example: { unreadCount: 3 } })
   @Get('unread-count')
   async unreadCount(@CurrentUser() user: AuthenticatedUser | undefined) {
     if (!user) {
@@ -63,6 +70,8 @@ export class NotificationsController {
     return this.notificationsService.getUnreadCount(user.userId);
   }
 
+  @ApiOperation({ summary: 'Mark one notification as read' })
+  @ApiResponse({ status: 200, description: 'Notification marked as read', example: { success: true, id: '507f1f77bcf86cd799439011' } })
   @Patch(':id/read')
   async markAsRead(
     @CurrentUser() user: AuthenticatedUser | undefined,
@@ -75,6 +84,8 @@ export class NotificationsController {
     return this.notificationsService.markAsRead(user.userId, notificationId);
   }
 
+  @ApiOperation({ summary: 'Mark all notifications as read' })
+  @ApiResponse({ status: 200, description: 'All notifications marked as read', example: { success: true, updated: 5 } })
   @Patch('read-all')
   async markAllAsRead(@CurrentUser() user: AuthenticatedUser | undefined) {
     if (!user) {

@@ -18,7 +18,15 @@ export class UsersService {
     return this.userModel.findOne({ email });
   }
 
+  async findByUsername(username: string) {
+    return this.userModel.findOne({ username });
+  }
+
   async findById(id: string) {
     return this.userModel.findById(id);
+  }
+
+  async updateById(id: string, userData: Partial<User>) {
+    return this.userModel.findByIdAndUpdate(id, userData, { new: true });
   }
 }

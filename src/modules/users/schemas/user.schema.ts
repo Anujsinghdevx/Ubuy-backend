@@ -37,6 +37,16 @@ export class User {
 
   @Prop()
   verificationCodeExpiry?: Date;
+
+  @Prop()
+  passwordResetCode?: string;
+
+  @Prop()
+  passwordResetCodeExpiry?: Date;
+
+  createdAt?: Date;
+
+  updatedAt?: Date;
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);

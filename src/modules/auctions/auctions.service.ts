@@ -1,7 +1,11 @@
-import { Injectable, BadRequestException, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  Logger,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Auction, AuctionDocument } from './schemas/auction.schema';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { CreateAuctionDto } from './dto/create-auction.dto';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Job, Queue } from 'bullmq';
@@ -9,6 +13,7 @@ import { Bid, BidDocument } from '@/modules/bids/schemas/bid.schema';
 import { PaymentExpiryDecisionAction } from './dto/payment-expiry-decision.dto';
 import { BidsGateway } from '@/modules/bids/bids.gateway';
 import { NotificationsService } from '@/modules/notifications/notifications.service';
+import { User, UserDocument } from '@/modules/users/schemas/user.schema';
 
 const PAYMENT_REMINDER_DELAY_MS = 12 * 60 * 60 * 1000;
 const PAYMENT_EXPIRY_DELAY_MS = 24 * 60 * 60 * 1000;
@@ -22,10 +27,65 @@ export class AuctionsService {
     private auctionModel: Model<AuctionDocument>,
     @InjectModel(Bid.name)
     private bidModel: Model<BidDocument>,
+    @InjectModel(User.name)
+    private userModel: Model<UserDocument>,
     @InjectQueue('auctionQueue') private auctionQueue: Queue,
     private readonly bidsGateway: BidsGateway,
     private readonly notificationsService: NotificationsService,
   ) {}
+
+  async getBidStatsForUser(userId: string) {
+    const user = await this.userModel
+      .findById(userId)
+      .select({ _id: 1, biddedAuctions: 1 });
+
+    if (!user) {
+      throw new BadRequestException('User not found');
+    }
+
+    const auctionIds = (user.biddedAuctions ?? []).filter((id) =>
+      Types.ObjectId.isValid(id),
+    );
+
+    if (auctionIds.length > 0) {
+      await this.auctionModel.updateMany(
+        {
+          _id: { $in: auctionIds },
+          endTime: { $lte: new Date() },
+          status: 'ACTIVE',
+        },
+        {
+          $set: {
+            status: 'ENDED',
+          },
+        },
+      );
+    }
+
+    const totalBids = await this.bidModel.countDocuments(
+      auctionIds.length > 0
+        ? { userId, auctionId: { $in: auctionIds } }
+        : { userId },
+    );
+
+    const auctionsCreated = await this.auctionModel.countDocuments({
+      createdBy: userId,
+    });
+
+    const auctionsWon =
+      auctionIds.length > 0
+        ? await this.auctionModel.countDocuments({
+            _id: { $in: auctionIds },
+            winner: userId,
+          })
+        : 0;
+
+    return {
+      totalBids,
+      auctionsCreated,
+      auctionsWon,
+    };
+  }
 
   async create(createDto: CreateAuctionDto, userId: string) {
     if (new Date(createDto.endTime) <= new Date(createDto.startTime)) {
@@ -549,18 +609,57 @@ export class AuctionsService {
     ]);
 
     if (bidSummary.length === 0) {
-      return [];
+      return {
+        biddedAuctions: [],
+        total: 0,
+      };
     }
 
     const auctionIds = bidSummary.map((item) => item._id);
+
+    await this.auctionModel.updateMany(
+      {
+        _id: { $in: auctionIds },
+        endTime: { $lte: new Date() },
+        status: 'ACTIVE',
+      },
+      {
+        $set: {
+          status: 'ENDED',
+        },
+      },
+    );
 
     const auctions = await this.auctionModel.find({
       _id: { $in: auctionIds },
     });
 
-    const auctionById = new Map(auctions.map((auction) => [String(auction._id), auction]));
+    const winnerSummary = await this.bidModel.aggregate<{
+      _id: string;
+      winnerId: string;
+    }>([
+      {
+        $match: {
+          auctionId: { $in: auctionIds },
+        },
+      },
+      {
+        $sort: { amount: -1, createdAt: 1 },
+      },
+      {
+        $group: {
+          _id: '$auctionId',
+          winnerId: { $first: '$userId' },
+        },
+      },
+    ]);
 
-    return bidSummary
+    const auctionById = new Map(auctions.map((auction) => [String(auction._id), auction]));
+    const winnerByAuctionId = new Map(
+      winnerSummary.map((item) => [item._id, item.winnerId]),
+    );
+
+    const biddedAuctions = bidSummary
       .map((item) => {
         const auction = auctionById.get(item._id);
 
@@ -569,7 +668,12 @@ export class AuctionsService {
         }
 
         return {
-          auction,
+          ...auction.toObject(),
+          winnerId:
+            winnerByAuctionId.get(item._id) ??
+            auction.winner ??
+            auction.highestBidder ??
+            null,
           myBid: {
             highest: item.highestMyBid,
             lastAmount: item.lastBidAmount,
@@ -578,5 +682,10 @@ export class AuctionsService {
         };
       })
       .filter((item): item is NonNullable<typeof item> => item !== null);
+
+    return {
+      biddedAuctions,
+      total: biddedAuctions.length,
+    };
   }
 }

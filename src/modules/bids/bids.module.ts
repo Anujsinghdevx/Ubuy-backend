@@ -11,6 +11,7 @@ import { RedisService } from '@/common/redis/redis.service';
 import { AuthModule } from '@/modules/auth/auth.module';
 import { WsJwtGuard } from '@/common/guards/ws-jwt.guard';
 import { NotificationsModule } from '@/modules/notifications/notifications.module';
+import { User, UserSchema } from '@/modules/users/schemas/user.schema';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { NotificationsModule } from '@/modules/notifications/notifications.modul
     MongooseModule.forFeature([
       { name: Bid.name, schema: BidSchema },
       { name: Auction.name, schema: AuctionSchema },
+      { name: User.name, schema: UserSchema },
     ]),
   ],
   providers: [BidsGateway, BidsService, RedisService, WsJwtGuard],

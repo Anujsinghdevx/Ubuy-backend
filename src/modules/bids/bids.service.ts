@@ -1,11 +1,12 @@
 import { Logger, forwardRef, Inject, Injectable } from '@nestjs/common';
 import { BidsGateway } from './bids.gateway';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { Bid } from './schemas/bid.schema';
 import { Auction } from '@/modules/auctions/schemas/auction.schema';
 import { InjectModel } from '@nestjs/mongoose';
 import { RedisService } from '@/common/redis/redis.service';
 import { NotificationsService } from '@/modules/notifications/notifications.service';
+import { User, UserDocument } from '@/modules/users/schemas/user.schema';
 
 @Injectable()
 export class BidsService {
@@ -14,6 +15,7 @@ export class BidsService {
   constructor(
     @InjectModel(Auction.name) private auctionModel: Model<Auction>,
     @InjectModel(Bid.name) private bidModel: Model<Bid>,
+    @InjectModel(User.name) private userModel: Model<UserDocument>,
     @Inject(forwardRef(() => BidsGateway))
     private bidsGateway: BidsGateway,
     private redisService: RedisService,
@@ -21,6 +23,10 @@ export class BidsService {
   ) {}
 
   async placeBid(userId: string, auctionId: string, amount: number) {
+    if (!Types.ObjectId.isValid(auctionId)) {
+      throw new Error('Invalid auction id');
+    }
+
     const redis = this.redisService.getClient();
 
     const lockKey = `lock:auction:${auctionId}`;
@@ -38,8 +44,32 @@ export class BidsService {
         throw new Error('Auction not found');
       }
 
+      if (currentAuction.createdBy === userId) {
+        throw new Error('You cannot bid on your own auction');
+      }
+
+      if (new Date(currentAuction.endTime).getTime() <= Date.now()) {
+        if (currentAuction.status === 'ACTIVE') {
+          currentAuction.status = 'ENDED';
+          currentAuction.winner = currentAuction.highestBidder;
+          await currentAuction.save();
+        }
+
+        throw new Error('Auction has ended');
+      }
+
       if (currentAuction.status !== 'ACTIVE') {
         throw new Error('Auction is not active');
+      }
+
+      const latestBid = await this.bidModel
+        .findOne({ auctionId })
+        .sort({ createdAt: -1 })
+        .select({ userId: 1 })
+        .lean();
+
+      if (latestBid?.userId === userId) {
+        throw new Error('You cannot place consecutive bids');
       }
 
       if (amount <= currentAuction.currentPrice) {
@@ -75,6 +105,11 @@ export class BidsService {
         userId,
         amount,
       });
+
+      await this.userModel.updateOne(
+        { _id: userId },
+        { $addToSet: { biddedAuctions: auctionId } },
+      );
 
       this.bidsGateway.server.to(auctionId).emit('newBid', {
         auctionId,
