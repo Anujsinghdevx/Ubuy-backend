@@ -3,9 +3,26 @@ import { Injectable } from '@nestjs/common';
 @Injectable()
 export class AppService {
   getRootStatus() {
-    const port = Number(process.env.PORT ?? 8080);
+    const port = Number(process.env.PORT ?? 6000);
     const baseUrl = `http://localhost:${port}`;
     const versionPrefix = '/v1';
+    const isProduction = process.env.NODE_ENV === 'production';
+    const enableAdminTools = process.env.ENABLE_ADMIN_TOOLS === 'true';
+    const showAdminLinks = !isProduction || enableAdminTools;
+
+    const links = {
+      health: `${baseUrl}/health`,
+      versionedApiBase: `${baseUrl}${versionPrefix}`,
+      ...(showAdminLinks
+        ? {
+            docs: `${baseUrl}/docs`,
+            docsJson: `${baseUrl}/docs-json`,
+            apiInfo: `${baseUrl}/api-info`,
+            queueDashboard: `${baseUrl}/admin/queues`,
+          }
+        : {
+          }),
+    };
 
     return {
       status: 'ok',
@@ -14,21 +31,30 @@ export class AppService {
       uptimeSeconds: Number(process.uptime().toFixed(2)),
       service: 'Ubuy Backend',
       environment: process.env.NODE_ENV ?? 'development',
-      links: {
-        health: `${baseUrl}/health`,
-        docs: `${baseUrl}/docs`,
-        docsJson: `${baseUrl}/docs-json`,
-        apiInfo: `${baseUrl}/api-info`,
-        versionedApiBase: `${baseUrl}${versionPrefix}`,
-        queueDashboard: `${baseUrl}/admin/queues`,
-      },
+      links,
     };
   }
 
   getApiInfo() {
-    const port = Number(process.env.PORT ?? 8080);
+    const port = Number(process.env.PORT ?? 6000);
     const baseUrl = `http://localhost:${port}`;
     const versionPrefix = '/v1';
+    const isProduction = process.env.NODE_ENV === 'production';
+    const enableAdminTools = process.env.ENABLE_ADMIN_TOOLS === 'true';
+    const showAdminLinks = !isProduction || enableAdminTools;
+
+    const systemEndpoints = [
+      { method: 'GET', path: '/', auth: 'public' },
+      { method: 'GET', path: '/api-info', auth: 'public' },
+    ];
+
+    if (showAdminLinks) {
+      systemEndpoints.push(
+        { method: 'GET', path: '/docs', auth: 'public' },
+        { method: 'GET', path: '/docs-json', auth: 'public' },
+        { method: 'GET', path: '/admin/queues', auth: 'public' },
+      );
+    }
 
     return {
       status: 'ok',
@@ -169,11 +195,7 @@ export class AppService {
           },
         ],
         system: [
-          { method: 'GET', path: '/', auth: 'public' },
-          { method: 'GET', path: '/api-info', auth: 'public' },
-          { method: 'GET', path: '/docs', auth: 'public' },
-          { method: 'GET', path: '/docs-json', auth: 'public' },
-          { method: 'GET', path: '/admin/queues', auth: 'public' },
+          ...systemEndpoints,
         ],
       },
       websockets: {
@@ -184,10 +206,15 @@ export class AppService {
       notes: {
         success: 'Use /docs as the canonical API contract and /api-info as an integration index.',
         healthCheck: `${baseUrl}/health`,
-        docs: `${baseUrl}/docs`,
-        docsJson: `${baseUrl}/docs-json`,
+        ...(showAdminLinks
+          ? {
+              docs: `${baseUrl}/docs`,
+              docsJson: `${baseUrl}/docs-json`,
+              queueDashboard: `${baseUrl}/admin/queues`,
+            }
+          : {
+            }),
         versionedApiBase: `${baseUrl}${versionPrefix}`,
-        queueDashboard: `${baseUrl}/admin/queues`,
       },
     };
   }

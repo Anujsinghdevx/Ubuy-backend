@@ -14,6 +14,8 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   const expressApp = app.getHttpAdapter().getInstance();
+  const isProduction = process.env.NODE_ENV === 'production';
+  const enableAdminTools = process.env.ENABLE_ADMIN_TOOLS === 'true';
 
   app.enableVersioning({
     type: VersioningType.URI,
@@ -51,32 +53,36 @@ async function bootstrap() {
     }),
   );
 
-  const swaggerConfig = new DocumentBuilder()
-    .setTitle('Ubuy Backend API')
-    .setDescription('HTTP API documentation for Ubuy backend')
-    .setVersion('1.0')
-    .addBearerAuth()
-    .build();
+  if (!isProduction || enableAdminTools) {
+    const swaggerConfig = new DocumentBuilder()
+      .setTitle('Ubuy Backend API')
+      .setDescription('HTTP API documentation for Ubuy backend')
+      .setVersion('1.0')
+      .addBearerAuth()
+      .build();
 
-  const swaggerDocument = SwaggerModule.createDocument(app, swaggerConfig);
-  SwaggerModule.setup('docs', app, swaggerDocument, {
-    jsonDocumentUrl: 'docs-json',
-  });
+    const swaggerDocument = SwaggerModule.createDocument(app, swaggerConfig);
+    SwaggerModule.setup('docs', app, swaggerDocument, {
+      jsonDocumentUrl: 'docs-json',
+    });
+  }
 
   const configService = app.get(ConfigService);
   const redisAdapter = new RedisIoAdapter(app, configService);
 
-  const serverAdapter = new ExpressAdapter();
-  serverAdapter.setBasePath('/admin/queues');
+  if (!isProduction || enableAdminTools) {
+    const serverAdapter = new ExpressAdapter();
+    serverAdapter.setBasePath('/admin/queues');
 
-  const auctionQueue = app.get<Queue>(getQueueToken('auctionQueue'));
+    const auctionQueue = app.get<Queue>(getQueueToken('auctionQueue'));
 
-  createBullBoard({
-    queues: [new BullMQAdapter(auctionQueue)],
-    serverAdapter,
-  });
+    createBullBoard({
+      queues: [new BullMQAdapter(auctionQueue)],
+      serverAdapter,
+    });
 
-  app.use('/admin/queues', serverAdapter.getRouter());
+    app.use('/admin/queues', serverAdapter.getRouter());
+  }
 
   try {
     await redisAdapter.connectToRedis();
@@ -88,10 +94,12 @@ async function bootstrap() {
     );
   }
 
-  const port = Number(process.env.PORT ?? 8080);
-  await app.listen(port);
+  const port = Number(process.env.PORT ?? 6000);
+  await app.listen(port, '0.0.0.0');
 
   Logger.log(`Server is running on: ${await app.getUrl()}`, 'Bootstrap');
-  Logger.log(`BullMQ dashboard: ${await app.getUrl()}/admin/queues`, 'Bootstrap');
+  if (!isProduction || enableAdminTools) {
+    Logger.log(`BullMQ dashboard: ${await app.getUrl()}/admin/queues`, 'Bootstrap');
+  }
 }
 void bootstrap();

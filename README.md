@@ -120,6 +120,16 @@ npm install
 npm run start:dev
 ```
 
+## Environment Variables
+
+For local development and Render deployment, set at least:
+
+- `MONGO_URI`
+- `REDIS_URL` for Render Redis or another hosted Redis instance
+- `JWT_SECRET`
+- `PORT` is provided by Render in production, but can default locally
+- `ENABLE_ADMIN_TOOLS=true` only when you want Swagger and the BullMQ dashboard exposed in production
+
 ---
 
 ## API Quick Check
