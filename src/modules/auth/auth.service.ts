@@ -79,6 +79,33 @@ export class AuthService {
     return expiry;
   }
 
+  private toUsernameBase(value: string) {
+    const normalized = value
+      .toLowerCase()
+      .replace(/[^a-z0-9_]/g, '_')
+      .replace(/_+/g, '_')
+      .replace(/^_+|_+$/g, '');
+
+    return normalized || 'user';
+  }
+
+  private async generateUniqueUsername(seed: string) {
+    const base = this.toUsernameBase(seed).slice(0, 22);
+    const maxAttempts = 15;
+
+    for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+      const suffix = attempt === 0 ? '' : `_${Math.floor(1000 + Math.random() * 9000)}`;
+      const candidate = `${base}${suffix}`.slice(0, 30);
+      const existing = await this.usersService.findByUsername(candidate);
+
+      if (!existing) {
+        return candidate;
+      }
+    }
+
+    return `user_${Date.now().toString().slice(-8)}`;
+  }
+
   async checkUsernameUnique(username: string) {
     const existingUser = await this.usersService.findByUsername(username);
 
@@ -499,8 +526,12 @@ export class AuthService {
       const user = await this.usersService.findByEmail(email);
 
       if (!user) {
+        const usernameSeed = email.split('@')[0] || payload.name || 'user';
+        const generatedUsername = await this.generateUniqueUsername(usernameSeed);
+
         const createdUser = await this.usersService.create({
           email,
+          username: generatedUsername,
           name: payload.name,
           image: payload.picture,
           googleId,
@@ -525,6 +556,11 @@ export class AuthService {
 
       if (!user.image && payload.picture) {
         user.image = payload.picture;
+      }
+
+      if (!user.username) {
+        const usernameSeed = email.split('@')[0] || payload.name || 'user';
+        user.username = await this.generateUniqueUsername(usernameSeed);
       }
 
       if (!user.verificationCodeExpiry || user.verificationCodeExpiry < new Date()) {
