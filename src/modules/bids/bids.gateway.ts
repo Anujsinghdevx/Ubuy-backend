@@ -23,7 +23,6 @@ type AuthenticatedSocket = Socket<
   }
 >;
 
-@UseGuards(WsJwtGuard)
 @WebSocketGateway({
   cors: true,
 })
@@ -79,6 +78,7 @@ export class BidsGateway {
   }
 
   @SubscribeMessage('placeBid')
+  @UseGuards(WsJwtGuard)
   async handlePlaceBid(
     @ConnectedSocket() client: AuthenticatedSocket,
     @MessageBody()
