@@ -129,6 +129,9 @@ For local development and Render deployment, set at least:
 - `JWT_SECRET`
 - `PORT` is provided by Render in production, but can default locally
 - `ENABLE_ADMIN_TOOLS=true` only when you want Swagger and the BullMQ dashboard exposed in production
+- `FRONTEND_BASE_URL` optional, used to auto-build payment return URL fallback
+- `PAYMENT_RETURN_URL` optional, explicit fallback redirect URL after payment
+- `PAYMENT_NOTIFY_URL` optional, explicit fallback webhook notify URL sent to payment provider
 
 ---
 

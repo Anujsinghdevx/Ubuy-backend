@@ -296,6 +296,10 @@ export class PaymentsService {
     const baseUrl =
       this.configService.get<string>('CASHFREE_BASE_URL') ??
       'https://sandbox.cashfree.com';
+    const frontendBaseUrlRaw = this.configService.get<string>('FRONTEND_BASE_URL');
+    const frontendBaseUrl = frontendBaseUrlRaw?.replace(/\/+$/, '');
+    const configuredReturnUrl = this.configService.get<string>('PAYMENT_RETURN_URL');
+    const configuredNotifyUrl = this.configService.get<string>('PAYMENT_NOTIFY_URL');
 
     const linkId = `auction_${String(auction._id)}_${Date.now()}`;
 
@@ -326,10 +330,19 @@ export class PaymentsService {
       },
     };
 
-    if (payload.notifyUrl || payload.returnUrl) {
+    const effectiveReturnUrl =
+      payload.returnUrl ||
+      configuredReturnUrl ||
+      (frontendBaseUrl
+        ? `${frontendBaseUrl}/payments/status?auctionId=${String(auction._id)}`
+        : undefined);
+
+    const effectiveNotifyUrl = payload.notifyUrl || configuredNotifyUrl;
+
+    if (effectiveNotifyUrl || effectiveReturnUrl) {
       requestBody.link_meta = {
-        notify_url: payload.notifyUrl,
-        return_url: payload.returnUrl,
+        notify_url: effectiveNotifyUrl,
+        return_url: effectiveReturnUrl,
       };
     }
 
@@ -362,6 +375,8 @@ export class PaymentsService {
       linkId: data.link_id,
       linkUrl: data.link_url,
       status: data.link_status,
+      returnUrl: effectiveReturnUrl,
+      notifyUrl: effectiveNotifyUrl,
       data,
     };
   }
