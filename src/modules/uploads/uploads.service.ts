@@ -3,6 +3,11 @@ import { ConfigService } from '@nestjs/config';
 import { v2 as cloudinary } from 'cloudinary';
 import { Readable } from 'stream';
 
+type UploadedImageFile = {
+  buffer: Buffer;
+  mimetype?: string;
+};
+
 @Injectable()
 export class UploadsService {
   constructor(private readonly configService: ConfigService) {
@@ -21,7 +26,7 @@ export class UploadsService {
     });
   }
 
-  async uploadAuctionImages(files: Express.Multer.File[]) {
+  async uploadAuctionImages(files: UploadedImageFile[]) {
     if (!files || files.length === 0) {
       throw new BadRequestException('No files uploaded');
     }

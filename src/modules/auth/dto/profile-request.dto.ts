@@ -7,7 +7,7 @@ export class ProfileRequestDto {
     description: 'Authenticated user id',
   })
   @IsString()
-  userId: string;
+  userId!: string;
 
   @ApiProperty({
     example: 'User',
@@ -16,5 +16,5 @@ export class ProfileRequestDto {
   })
   @IsString()
   @IsIn(['User', 'AuthUser'])
-  userModel: 'User' | 'AuthUser';
+  userModel!: 'User' | 'AuthUser';
 }

@@ -8,5 +8,5 @@ export class PlaceAuctionBidDto {
   })
   @IsNumber()
   @Min(1)
-  amount: number;
+  amount!: number;
 }

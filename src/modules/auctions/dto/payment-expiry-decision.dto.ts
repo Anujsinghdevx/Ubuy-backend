@@ -12,5 +12,5 @@ export type PaymentExpiryDecisionAction =
 export class PaymentExpiryDecisionDto {
   @ApiProperty({ example: 'PUSH_NEXT', description: 'Action when payment expires', enum: ['PUSH_NEXT', 'KEEP_CURRENT'] })
   @IsIn(PAYMENT_EXPIRY_DECISION_ACTIONS)
-  action: PaymentExpiryDecisionAction;
+  action!: PaymentExpiryDecisionAction;
 }

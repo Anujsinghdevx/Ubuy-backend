@@ -9,7 +9,7 @@ export enum ResendCodePurpose {
 export class ResendCodeDto {
   @ApiProperty({ example: 'john@example.com', description: 'Email address' })
   @IsEmail()
-  email: string;
+  email!: string;
 
   @ApiProperty({ example: 'email-verification', description: 'Purpose for resending code', enum: ResendCodePurpose, required: false })
   @IsOptional()

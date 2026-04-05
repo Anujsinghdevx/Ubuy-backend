@@ -9,6 +9,7 @@ import {
 } from '@nestjs/websockets';
 import { Logger, forwardRef, Inject, UseGuards } from '@nestjs/common';
 import { Server, Socket } from 'socket.io';
+import { JwtService } from '@nestjs/jwt';
 
 import { WsJwtGuard } from '@/common/guards/ws-jwt.guard';
 import { BidsService } from './bids.service';
@@ -30,12 +31,54 @@ export class BidsGateway {
   private readonly logger = new Logger(BidsGateway.name);
 
   @WebSocketServer()
-  server: Server;
+  server!: Server;
 
   constructor(
     @Inject(forwardRef(() => BidsService))
     private readonly bidsService: BidsService,
+    private readonly jwtService: JwtService,
   ) {}
+
+  private tryHydrateUserFromHandshake(client: AuthenticatedSocket) {
+    if (client.data.user?.userId) {
+      return client.data.user;
+    }
+
+    const authToken: unknown = client.handshake.auth?.token;
+    const queryToken: unknown = client.handshake.query?.token;
+    const bearerToken: unknown =
+      client.handshake.headers.authorization?.split(' ')[1];
+
+    const normalizedQueryToken =
+      typeof queryToken === 'string'
+        ? queryToken
+        : Array.isArray(queryToken) && typeof queryToken[0] === 'string'
+          ? queryToken[0]
+          : undefined;
+
+    const token =
+      typeof authToken === 'string'
+        ? authToken
+        : typeof bearerToken === 'string'
+          ? bearerToken
+          : normalizedQueryToken;
+
+    if (!token) {
+      return undefined;
+    }
+
+    try {
+      const payload = this.jwtService.verify<{ sub: string; email: string }>(token);
+      client.data.user = {
+        userId: payload.sub,
+        email: payload.email,
+      };
+
+      return client.data.user;
+    } catch {
+      return undefined;
+    }
+  }
 
   @SubscribeMessage('joinAuction')
   async handleJoinAuction(
@@ -49,7 +92,7 @@ export class BidsGateway {
       throw new WsException('auctionId is required');
     }
 
-    const user = client.data.user;
+    const user = this.tryHydrateUserFromHandshake(client);
 
     if (user?.userId) {
       await client.join(`user:${user.userId}`);

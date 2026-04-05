@@ -7,5 +7,5 @@ export class WishlistAuctionDto {
     description: 'Auction ID to add/remove from wishlist',
   })
   @IsString()
-  auctionId: string;
+  auctionId!: string;
 }

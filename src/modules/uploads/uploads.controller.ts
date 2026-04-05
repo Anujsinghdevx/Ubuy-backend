@@ -10,6 +10,11 @@ import { JwtAuthGuard } from '@/modules/auth/guards/jwt-auth.guard';
 import { UploadsService } from './uploads.service';
 import { ApiBearerAuth, ApiOperation, ApiTags, ApiResponse } from '@nestjs/swagger';
 
+type UploadedImageFile = {
+  buffer: Buffer;
+  mimetype?: string;
+};
+
 @ApiTags('uploads')
 @ApiBearerAuth()
 @Controller('uploads')
@@ -28,7 +33,7 @@ export class UploadsController {
       },
     }),
   )
-  async uploadImages(@UploadedFiles() files: Express.Multer.File[]) {
+  async uploadImages(@UploadedFiles() files: UploadedImageFile[]) {
     return this.uploadsService.uploadAuctionImages(files);
   }
 }

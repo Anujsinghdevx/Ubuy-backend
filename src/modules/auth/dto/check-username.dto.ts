@@ -5,5 +5,5 @@ export class CheckUsernameDto {
   @ApiProperty({ example: 'johndoe', description: 'Username to check for availability' })
   @IsString()
   @MinLength(3)
-  username: string;
+  username!: string;
 }

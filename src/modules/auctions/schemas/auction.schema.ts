@@ -19,34 +19,34 @@ type WinnerHistoryEntry = {
 @Schema({ timestamps: true })
 export class Auction {
   @Prop({ required: true })
-  title: string;
+  title!: string;
 
   @Prop()
-  description: string;
+  description!: string;
 
   @Prop([String])
-  images: string[];
+  images!: string[];
 
   @Prop({ required: true })
-  startingPrice: number;
+  startingPrice!: number;
 
   @Prop({ required: true })
-  currentPrice: number;
+  currentPrice!: number;
 
   @Prop({ enum: AUCTION_STATUS, default: 'ACTIVE' })
-  status: AuctionStatus;
+  status!: AuctionStatus;
 
   @Prop({ required: true })
-  startTime: Date;
+  startTime!: Date;
 
   @Prop({ required: true })
-  endTime: Date;
+  endTime!: Date;
 
   @Prop()
-  category: string;
+  category!: string;
 
   @Prop({ required: true })
-  createdBy: string;
+  createdBy!: string;
 
   @Prop()
   highestBidder?: string;
@@ -55,10 +55,10 @@ export class Auction {
   winner?: string;
 
   @Prop({ default: false })
-  notified: boolean;
+  notified!: boolean;
 
   @Prop({ enum: PAYMENT_STATUS, default: 'ACTIVE' })
-  paymentStatus: PaymentStatus;
+  paymentStatus!: PaymentStatus;
 
   @Prop()
   paymentDueAt?: Date;
@@ -74,7 +74,7 @@ export class Auction {
     ],
     default: [],
   })
-  winnerHistory: WinnerHistoryEntry[];
+  winnerHistory!: WinnerHistoryEntry[];
 }
 
 export const AuctionSchema = SchemaFactory.createForClass(Auction);

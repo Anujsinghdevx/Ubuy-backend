@@ -6,7 +6,7 @@ export type UserDocument = User & Document;
 @Schema({ timestamps: true })
 export class User {
   @Prop({ required: true, unique: true })
-  email: string;
+  email!: string;
 
   @Prop({ unique: true, sparse: true })
   username?: string;
@@ -21,16 +21,16 @@ export class User {
   image?: string;
 
   @Prop({ default: false })
-  isVerified: boolean;
+  isVerified!: boolean;
 
   @Prop()
   googleId?: string;
 
   @Prop({ default: 'local' })
-  provider: 'local' | 'google';
+  provider!: 'local' | 'google';
 
   @Prop({ default: [] })
-  biddedAuctions: string[];
+  biddedAuctions!: string[];
 
   @Prop()
   verificationCode?: string;

@@ -5,5 +5,5 @@ export class PublicProfileDto {
   @ApiProperty({ example: 'johndoe', description: 'Username' })
   @IsString()
   @MinLength(3)
-  username: string;
+  username!: string;
 }
