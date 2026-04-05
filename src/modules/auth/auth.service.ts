@@ -455,7 +455,12 @@ export class AuthService {
     const googleClientId = this.configService.get<string>('GOOGLE_CLIENT_ID');
 
     if (!googleClientId) {
-      throw new InternalServerErrorException('GOOGLE_CLIENT_ID is not configured');
+      this.logger.error(
+        'Google auth attempted but GOOGLE_CLIENT_ID is not configured',
+      );
+      throw new BadRequestException(
+        'Google auth is not configured on server. Please contact support.',
+      );
     }
 
     const client = this.getGoogleClient();
@@ -490,48 +495,62 @@ export class AuthService {
       throw new BadRequestException('Google account email is not verified');
     }
 
-    const user = await this.usersService.findByEmail(email);
+    try {
+      const user = await this.usersService.findByEmail(email);
 
-    if (!user) {
-      const createdUser = await this.usersService.create({
-        email,
-        name: payload.name,
-        image: payload.picture,
-        googleId,
-        provider: 'google',
-        isVerified: true,
-      });
+      if (!user) {
+        const createdUser = await this.usersService.create({
+          email,
+          name: payload.name,
+          image: payload.picture,
+          googleId,
+          provider: 'google',
+          isVerified: true,
+        });
+
+        return {
+          ...this.issueAccessToken(String(createdUser._id), createdUser.email),
+          isNewUser: true,
+          user: this.toAuthUserPayload(createdUser),
+        };
+      }
+
+      user.googleId = googleId;
+      user.provider = 'google';
+      user.isVerified = true;
+
+      if (!user.name && payload.name) {
+        user.name = payload.name;
+      }
+
+      if (!user.image && payload.picture) {
+        user.image = payload.picture;
+      }
+
+      if (!user.verificationCodeExpiry || user.verificationCodeExpiry < new Date()) {
+        user.verificationCode = undefined;
+        user.verificationCodeExpiry = undefined;
+      }
+
+      await user.save();
 
       return {
-        ...this.issueAccessToken(String(createdUser._id), createdUser.email),
-        isNewUser: true,
-        user: this.toAuthUserPayload(createdUser),
+        ...this.issueAccessToken(String(user._id), user.email),
+        isNewUser: false,
+        user: this.toAuthUserPayload(user),
       };
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'Unknown Google auth error';
+      this.logger.error(`Google auth persistence failed: ${message}`);
+
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
+
+      throw new BadRequestException(
+        'Google sign-in failed. Please try again in a moment.',
+      );
     }
-
-    user.googleId = googleId;
-    user.provider = 'google';
-    user.isVerified = true;
-
-    if (!user.name && payload.name) {
-      user.name = payload.name;
-    }
-
-    if (!user.image && payload.picture) {
-      user.image = payload.picture;
-    }
-
-    if (!user.verificationCodeExpiry || user.verificationCodeExpiry < new Date()) {
-      user.verificationCode = undefined;
-      user.verificationCodeExpiry = undefined;
-    }
-
-    await user.save();
-
-    return {
-      ...this.issueAccessToken(String(user._id), user.email),
-      isNewUser: false,
-      user: this.toAuthUserPayload(user),
-    };
   }
 }
