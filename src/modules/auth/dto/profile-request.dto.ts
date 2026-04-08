@@ -1,4 +1,4 @@
-import { IsIn, IsString } from 'class-validator';
+import { IsString } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class ProfileRequestDto {
@@ -8,13 +8,4 @@ export class ProfileRequestDto {
   })
   @IsString()
   userId!: string;
-
-  @ApiProperty({
-    example: 'User',
-    description: 'Backward-compatibility field from old API',
-    enum: ['User', 'AuthUser'],
-  })
-  @IsString()
-  @IsIn(['User', 'AuthUser'])
-  userModel!: 'User' | 'AuthUser';
 }

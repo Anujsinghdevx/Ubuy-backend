@@ -27,6 +27,8 @@ export class UsersService {
   }
 
   async updateById(id: string, userData: Partial<User>) {
-    return this.userModel.findByIdAndUpdate(id, userData, { new: true });
+    return this.userModel.findByIdAndUpdate(id, userData, {
+      returnDocument: 'after',
+    });
   }
 }

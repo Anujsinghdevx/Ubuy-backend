@@ -55,7 +55,7 @@ export class NotificationsService {
         },
         {
           upsert: true,
-          new: true,
+          returnDocument: 'after',
         },
       );
     }
@@ -124,7 +124,7 @@ export class NotificationsService {
           readAt: new Date(),
         },
       },
-      { new: true },
+      { returnDocument: 'after' },
     );
 
     return {

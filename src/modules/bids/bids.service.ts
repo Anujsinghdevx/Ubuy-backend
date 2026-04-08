@@ -93,7 +93,7 @@ export class BidsService {
             highestBidder: userId,
           },
         },
-        { new: true },
+        { returnDocument: 'after' },
       );
 
       if (!updatedAuction) {

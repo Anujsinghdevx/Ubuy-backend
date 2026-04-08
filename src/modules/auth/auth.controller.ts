@@ -28,6 +28,7 @@ import { ResetPasswordDto } from './dto/reset-password.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { PublicProfileDto } from './dto/public-profile.dto';
 import { ProfileRequestDto } from './dto/profile-request.dto';
+import { MeResponseDto, MeUserDto } from './dto/me-response.dto';
 import { ApiBearerAuth, ApiOperation, ApiTags, ApiResponse } from '@nestjs/swagger';
 
 @ApiTags('auth')
@@ -127,7 +128,7 @@ export class AuthController {
 
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get authenticated profile (legacy compatibility payload)' })
-  @ApiResponse({ status: 200, description: 'Profile retrieved', example: { userId: '507f1f77bcf86cd799439011', email: 'john@example.com', username: 'johndoe', provider: 'local', isVerified: true } })
+  @ApiResponse({ status: 200, description: 'Profile retrieved', type: MeUserDto })
   @ApiResponse({ status: 403, description: 'userId must match authenticated user' })
   @UseGuards(JwtAuthGuard)
   @Post('profile')
@@ -164,13 +165,19 @@ export class AuthController {
 
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get authenticated user profile' })
-  @ApiResponse({ status: 200, description: 'Current user profile', example: { message: 'User fetched successfully', user: { userId: '507f1f77bcf86cd799439011', email: 'john@example.com', username: 'johndoe', name: 'John Doe' } } })
+  @ApiResponse({ status: 200, description: 'Current user profile', type: MeResponseDto })
   @Get('me')
   @UseGuards(JwtAuthGuard)
-  getProfile(@CurrentUser() user: AuthenticatedUser | undefined) {
+  async getProfile(@CurrentUser() user: AuthenticatedUser | undefined) {
+    if (!user?.userId) {
+      throw new UnauthorizedException('Unauthorized');
+    }
+
+    const profile = await this.authService.getProfileById(user.userId);
+
     return {
       message: 'User fetched successfully',
-      user,
+      user: profile,
     };
   }
 }
