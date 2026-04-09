@@ -6,12 +6,14 @@ import {
   WebSocketServer,
   WsException,
   Ack,
+  OnGatewayInit,
+  OnGatewayConnection,
+  OnGatewayDisconnect,
 } from '@nestjs/websockets';
-import { Logger, forwardRef, Inject, UseGuards } from '@nestjs/common';
+import { Logger, forwardRef, Inject } from '@nestjs/common';
 import { Server, Socket } from 'socket.io';
 import { JwtService } from '@nestjs/jwt';
 
-import { WsJwtGuard } from '@/common/guards/ws-jwt.guard';
 import { BidsService } from './bids.service';
 import { AuthenticatedUser } from '@/common/decorators/current-user.decorator';
 
@@ -27,7 +29,9 @@ type AuthenticatedSocket = Socket<
 @WebSocketGateway({
   cors: true,
 })
-export class BidsGateway {
+export class BidsGateway
+  implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect
+{
   private readonly logger = new Logger(BidsGateway.name);
 
   @WebSocketServer()
@@ -38,6 +42,43 @@ export class BidsGateway {
     private readonly bidsService: BidsService,
     private readonly jwtService: JwtService,
   ) {}
+
+  afterInit(server: Server) {
+    server.engine.on('connection_error', (error: Error & { code?: string }) => {
+      this.logger.warn(
+        JSON.stringify({
+          event: 'socket_connection_error',
+          code: error.code,
+          message: error.message,
+        }),
+      );
+    });
+  }
+
+  handleConnection(client: AuthenticatedSocket) {
+    const user = this.tryHydrateUserFromHandshake(client);
+
+    this.logger.log(
+      JSON.stringify({
+        event: 'socket_connected',
+        socketId: client.id,
+        userId: user?.userId,
+        transport: client.conn.transport.name,
+        hasAuthToken: typeof client.handshake.auth?.token === 'string',
+      }),
+    );
+  }
+
+  handleDisconnect(client: AuthenticatedSocket) {
+    this.logger.warn(
+      JSON.stringify({
+        event: 'socket_disconnected',
+        socketId: client.id,
+        userId: client.data.user?.userId,
+        reason: 'unknown',
+      }),
+    );
+  }
 
   private tryHydrateUserFromHandshake(client: AuthenticatedSocket) {
     if (client.data.user?.userId) {
@@ -121,85 +162,153 @@ export class BidsGateway {
   }
 
   @SubscribeMessage('placeBid')
-  @UseGuards(WsJwtGuard)
   async handlePlaceBid(
     @ConnectedSocket() client: AuthenticatedSocket,
     @MessageBody()
     data: { auctionId?: string; amount?: number | string } | undefined,
     @Ack() ack?: (response: unknown) => void,
   ) {
-    const user = client.data.user;
+    const ackProvided = typeof ack === 'function';
+    let ackSent = false;
+    let stage: 'auth' | 'validation' | 'service' | 'unexpected' = 'unexpected';
+    let userIdForLogs = 'anonymous';
+    let auctionIdForLogs =
+      typeof data?.auctionId === 'string' ? data.auctionId : undefined;
 
-    if (!user) {
-      const message = 'Unauthorized user';
+    const sendAckOnce = (response: { ok: boolean; data?: unknown; error?: string }) => {
+      if (!ackProvided || !ack) {
+        this.logger.warn(
+          JSON.stringify({
+            event: 'placeBid',
+            socketId: client.id,
+            stage,
+            userId: userIdForLogs,
+            auctionId: auctionIdForLogs,
+            ackProvided,
+            ackSent,
+            reason: 'ack_not_provided',
+            result: response.ok ? 'success' : 'failure',
+          }),
+        );
 
-      if (ack) {
-        ack({ ok: false, error: message });
-        return;
+        return false;
       }
 
-      throw new WsException(message);
-    }
+      if (ackSent) {
+        this.logger.error(
+          JSON.stringify({
+            event: 'placeBid',
+            socketId: client.id,
+            stage,
+            userId: userIdForLogs,
+            auctionId: auctionIdForLogs,
+            ackProvided,
+            ackSent,
+            reason: 'duplicate_ack_attempt_blocked',
+          }),
+        );
 
-    const auctionId = typeof data?.auctionId === 'string' ? data.auctionId : '';
-    const normalizedAmount =
-      typeof data?.amount === 'number'
-        ? data.amount
-        : typeof data?.amount === 'string'
-          ? Number(data.amount)
-          : Number.NaN;
-
-    if (!auctionId) {
-      const message = 'auctionId is required';
-
-      if (ack) {
-        ack({ ok: false, error: message });
-        return;
+        return true;
       }
 
-      throw new WsException(message);
-    }
+      ackSent = true;
+      let ackCallbackError: string | undefined;
 
-    if (!Number.isFinite(normalizedAmount) || normalizedAmount <= 0) {
-      const message = 'amount must be a number greater than 0';
-
-      if (ack) {
-        ack({ ok: false, error: message });
-        return;
+      try {
+        ack(response);
+      } catch (error) {
+        ackCallbackError =
+          error instanceof Error ? error.message : 'ack callback threw non-error value';
       }
 
-      throw new WsException(message);
-    }
+      this.logger.log(
+        JSON.stringify({
+          event: 'placeBid',
+          socketId: client.id,
+          stage,
+          userId: userIdForLogs,
+          auctionId: auctionIdForLogs,
+          ackProvided,
+          ackSent,
+          result: response.ok ? 'success' : 'failure',
+          ackCallbackError,
+        }),
+      );
+
+      return true;
+    };
 
     try {
+      stage = 'auth';
+      const user = this.tryHydrateUserFromHandshake(client);
+
+      if (!user?.userId) {
+        throw new Error('Unauthorized user');
+      }
+
+      userIdForLogs = user.userId;
+
+      stage = 'validation';
+      const auctionId = typeof data?.auctionId === 'string' ? data.auctionId : '';
+      auctionIdForLogs = auctionId;
+
+      const normalizedAmount =
+        typeof data?.amount === 'number'
+          ? data.amount
+          : typeof data?.amount === 'string'
+            ? Number(data.amount)
+            : Number.NaN;
+
+      if (!auctionId) {
+        throw new Error('auctionId is required');
+      }
+
+      if (!Number.isFinite(normalizedAmount) || normalizedAmount <= 0) {
+        throw new Error('amount must be a number greater than 0');
+      }
+
+      stage = 'service';
       const auction = await this.bidsService.placeBid(
         user.userId,
         auctionId,
         normalizedAmount,
       );
 
-      const response = { ok: true, data: auction };
+      const successResponse = { ok: true, data: auction };
 
-      if (ack) {
-        ack(response);
+      if (sendAckOnce(successResponse)) {
         return;
       }
 
-      return response;
+      return successResponse;
     } catch (error) {
       const message =
         error instanceof Error ? error.message : 'Failed to place bid';
 
       this.logger.warn(
-        `Bid rejected for auction ${auctionId}: ${message} (user ${user.userId})`,
+        `Bid rejected for auction ${auctionIdForLogs ?? 'unknown'}: ${message} (user ${userIdForLogs})`,
       );
 
-      if (ack) {
-        ack({ ok: false, error: message });
+      const failureResponse = { ok: false, error: message };
+
+      if (sendAckOnce(failureResponse)) {
         return;
       }
 
       throw new WsException(message);
+    } finally {
+      this.logger.log(
+        JSON.stringify({
+          event: 'placeBid',
+          socketId: client.id,
+          stage,
+          userId: userIdForLogs,
+          auctionId: auctionIdForLogs,
+          ackProvided,
+          ackSent,
+          lifecycle: 'completed',
+        }),
+      );
     }
   }
 }

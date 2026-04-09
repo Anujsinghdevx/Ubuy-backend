@@ -139,6 +139,111 @@ export class AuctionsService {
     };
   }
 
+  async getTopBiddersForAuction(auctionId: string, limit = 5) {
+    if (!Types.ObjectId.isValid(auctionId)) {
+      throw new BadRequestException('Invalid auction id');
+    }
+
+    const normalizedLimit = Math.min(20, Math.max(1, limit));
+
+    const [auctionExists, topBidders] = await Promise.all([
+      this.auctionModel.exists({ _id: auctionId }),
+      this.bidModel
+        .aggregate<{
+          userId: string;
+          amount: number;
+          time: Date;
+          bidderName: string;
+        }>([
+          {
+            $match: {
+              auctionId,
+            },
+          },
+          {
+            $sort: {
+              amount: -1,
+              createdAt: 1,
+            },
+          },
+          {
+            $group: {
+              _id: '$userId',
+              amount: { $first: '$amount' },
+              time: { $first: '$createdAt' },
+            },
+          },
+          {
+            $addFields: {
+              userObjectId: {
+                $convert: {
+                  input: '$_id',
+                  to: 'objectId',
+                  onError: null,
+                  onNull: null,
+                },
+              },
+            },
+          },
+          {
+            $lookup: {
+              from: 'users',
+              localField: 'userObjectId',
+              foreignField: '_id',
+              as: 'user',
+            },
+          },
+          {
+            $unwind: {
+              path: '$user',
+              preserveNullAndEmptyArrays: true,
+            },
+          },
+          {
+            $project: {
+              _id: 0,
+              userId: '$_id',
+              amount: 1,
+              time: 1,
+              bidderName: {
+                $ifNull: [
+                  '$user.name',
+                  {
+                    $ifNull: [
+                      '$user.username',
+                      {
+                        $ifNull: ['$user.email', 'Unknown bidder'],
+                      },
+                    ],
+                  },
+                ],
+              },
+            },
+          },
+          {
+            $sort: {
+              amount: -1,
+              time: 1,
+            },
+          },
+          {
+            $limit: normalizedLimit,
+          },
+        ])
+        .exec(),
+    ]);
+
+    if (!auctionExists) {
+      throw new BadRequestException('Auction not found');
+    }
+
+    return {
+      auctionId,
+      total: topBidders.length,
+      topBidders,
+    };
+  }
+
   async create(createDto: CreateAuctionDto, userId: string) {
     if (new Date(createDto.endTime) <= new Date(createDto.startTime)) {
       throw new BadRequestException('End time must be after start time');

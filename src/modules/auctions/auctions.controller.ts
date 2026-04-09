@@ -285,6 +285,22 @@ export class AuctionsController {
     );
   }
 
+  @ApiOperation({ summary: 'Get top bidders for an auction' })
+  @ApiQuery({ name: 'limit', required: false, type: Number, example: 5 })
+  @ApiResponse({ status: 200, description: 'Top bidders list', example: { auctionId: '507f1f77bcf86cd799439011', total: 3, topBidders: [{ userId: '507f1f77bcf86cd799439099', bidderName: 'Anuj', amount: 5500, time: '2026-04-09T10:32:10.000Z' }] } })
+  @Get(':id/top-bidders')
+  async getTopBiddersByAuction(
+    @Param('id') auctionId: string,
+    @Query('limit') limit?: string,
+  ) {
+    const limitNumber = limit ? Number(limit) : undefined;
+
+    return this.auctionsService.getTopBiddersForAuction(
+      auctionId,
+      Number.isFinite(limitNumber) ? limitNumber : undefined,
+    );
+  }
+
   @ApiOperation({ summary: 'Get auction details by id' })
   @ApiResponse({ status: 200, description: 'Auction details', example: { id: '507f1f77bcf86cd799439011', title: 'Vintage Jacket', currentBid: 5500, status: 'active', endTime: '2026-04-12T18:00:00Z' } })
   @Get(':id')
