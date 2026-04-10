@@ -120,6 +120,47 @@ npm install
 npm run start:dev
 ```
 
+## Smoke Testing
+
+- Fast core smoke suite (recommended for PR checks):
+
+```bash
+npm run test:smoke:core
+```
+
+- Extended smoke suite (authenticated notification and payment flows):
+
+```bash
+npm run test:smoke:extended
+```
+
+- Full smoke suite:
+
+```bash
+npm run test:smoke
+```
+
+- CI aliases:
+
+```bash
+npm run test:smoke:ci
+npm run test:smoke:nightly
+```
+
+- GitHub Actions options:
+
+```text
+.github/workflows/smoke-tests.yml
+```
+
+Uses external secrets (`MONGO_URI`, `REDIS_URL`, `JWT_SECRET`).
+
+```text
+.github/workflows/smoke-tests-services.yml
+```
+
+Uses GitHub Actions service containers (MongoDB + Redis) and does not require those external runtime secrets.
+
 ## Environment Variables
 
 For local development and Render deployment, set at least:

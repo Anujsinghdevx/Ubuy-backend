@@ -1,10 +1,10 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, OnApplicationShutdown } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import Redis from 'ioredis';
 import { getRedisOptions } from './redis.config';
 
 @Injectable()
-export class RedisService {
+export class RedisService implements OnApplicationShutdown {
   private readonly logger = new Logger(RedisService.name);
   private client: Redis;
 
@@ -51,5 +51,20 @@ export class RedisService {
 
   getClient() {
     return this.client;
+  }
+
+  async onApplicationShutdown() {
+    try {
+      if (this.client.status === 'ready' || this.client.status === 'connect') {
+        await this.client.quit();
+      } else if (this.client.status !== 'end') {
+        this.client.disconnect();
+      }
+    } catch (error) {
+      this.logger.warn(
+        `Redis client shutdown error: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      );
+      this.client.disconnect();
+    }
   }
 }

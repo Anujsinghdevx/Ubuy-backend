@@ -15,6 +15,12 @@
     "start:prod": "node --max-old-space-size=512 dist/main.js",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
     "test": "jest --passWithNoTests",
+    "test:smoke": "jest --config ./test/jest-smoke.json --runInBand",
+    "test:smoke:core": "jest --config ./test/jest-smoke.json --runInBand test/smoke/api.smoke-spec.ts",
+    "test:smoke:extended": "jest --config ./test/jest-smoke.json --runInBand test/smoke/user-flows.smoke-spec.ts",
+    "test:smoke:ci": "npm run test:smoke:core",
+    "test:smoke:nightly": "npm run test:smoke",
+    "test:smoke:watch": "jest --config ./test/jest-smoke.json --watch",
     "test:watch": "jest --watch --passWithNoTests",
     "test:cov": "jest --coverage --passWithNoTests",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand --passWithNoTests"
