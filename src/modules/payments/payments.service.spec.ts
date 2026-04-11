@@ -64,6 +64,12 @@ describe('PaymentsService', () => {
     );
   });
 
+  it('should allow webhook secret validation when no secret is configured', () => {
+    configService.get.mockReturnValue(undefined);
+
+    expect(() => service.validateWebhookSecret('any-secret')).not.toThrow();
+  });
+
   it('should return accepted response for failed webhook status', async () => {
     const result = await service.handleWebhook({
       auctionId: '507f1f77bcf86cd799439011',
@@ -77,6 +83,44 @@ describe('PaymentsService', () => {
     expect(
       auctionsService.confirmWinnerPaymentByProvider,
     ).not.toHaveBeenCalled();
+  });
+
+  it('should process successful webhook and emit notifications', async () => {
+    auctionsService.confirmWinnerPaymentByProvider.mockResolvedValue({
+      auction: {
+        _id: '507f1f77bcf86cd799439011',
+        winner: 'winner-1',
+        createdBy: 'creator-1',
+        paymentStatus: 'PAID',
+      },
+    } as never);
+
+    auctionsService.findById.mockResolvedValue({
+      _id: '507f1f77bcf86cd799439011',
+      winner: 'winner-1',
+      createdBy: 'creator-1',
+      paymentStatus: 'PAID',
+    } as never);
+
+    notificationsService.createNotification
+      .mockResolvedValueOnce({ _id: 'notif-1' } as never)
+      .mockResolvedValueOnce({ _id: 'notif-2' } as never);
+
+    const result = await service.handleWebhook({
+      auctionId: '507f1f77bcf86cd799439011',
+      status: 'SUCCESS',
+      winnerUserId: 'winner-1',
+      providerPaymentId: 'txn_123',
+    });
+
+    expect(result).toEqual(
+      expect.objectContaining({
+        message: 'Payment webhook processed successfully',
+        accepted: true,
+      }),
+    );
+    expect(notificationsService.createNotification).toHaveBeenCalled();
+    expect(emit).toHaveBeenCalled();
   });
 
   it('should throw when cashfree credentials are missing while creating payment link', async () => {
@@ -209,5 +253,51 @@ describe('PaymentsService', () => {
         customerPhone: '9876543210',
       }),
     ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('should use notifyPaymentForAuction to normalize phone input', async () => {
+    configService.get.mockImplementation((key: string) => {
+      if (key === 'CASHFREE_CLIENT_ID') {
+        return 'client-id';
+      }
+      if (key === 'CASHFREE_CLIENT_SECRET') {
+        return 'client-secret';
+      }
+      return undefined;
+    });
+
+    auctionsService.findById.mockResolvedValue({
+      _id: '507f1f77bcf86cd799439011',
+      title: 'Vintage Jacket',
+      status: 'ENDED',
+      winner: 'winner-1',
+      createdBy: 'creator-1',
+      paymentStatus: 'ACTIVE',
+      currentPrice: 1500,
+    } as never);
+
+    usersService.findById.mockResolvedValue({
+      _id: 'winner-1',
+      email: 'winner@ubuy.dev',
+      name: 'Winner User',
+      username: 'winner',
+    } as never);
+
+    jest.spyOn(globalThis, 'fetch' as never).mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        link_id: 'auction_507f1f77bcf86cd799439011_123',
+        link_url: 'https://cashfree.test/link',
+        link_status: 'ACTIVE',
+      }),
+    } as never);
+
+    const result = await service.notifyPaymentForAuction(
+      'winner-1',
+      '507f1f77bcf86cd799439011',
+      '   ',
+    );
+
+    expect(result).toEqual(expect.objectContaining({ winner: 'winner-1' }));
   });
 });

@@ -215,4 +215,93 @@ describe('AuctionsService', () => {
     expect(result).toBe(endedAuction);
     expect(endedAuction.save as MockFn).not.toHaveBeenCalled();
   });
+
+  it('should reject findByCategory when category is missing', async () => {
+    await expect(service.findByCategory('   ')).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
+  });
+
+  it('should return empty bidded auctions when user has no bids', async () => {
+    bidModel.aggregate
+      .mockResolvedValueOnce([{ total: 0 }] as never)
+      .mockResolvedValueOnce([] as never);
+
+    const result = await service.findBiddedByUser('user-10', 1, 10);
+
+    expect(result).toEqual({
+      page: 1,
+      limit: 10,
+      total: 0,
+      totalPages: 0,
+      biddedAuctions: [],
+    });
+  });
+
+  it('should trigger immediate auction end when creator requests it', async () => {
+    auctionModel.findById.mockResolvedValue({
+      _id: 'auction-6',
+      createdBy: 'owner-1',
+      status: 'ACTIVE',
+    } as never);
+    auctionQueue.getJob.mockResolvedValue({ remove: jest.fn() } as never);
+
+    const result = await service.requestImmediateEnd('auction-6', 'owner-1');
+
+    expect(auctionQueue.add).toHaveBeenCalledWith(
+      'endAuction',
+      { auctionId: 'auction-6' },
+      expect.objectContaining({ jobId: 'endAuction-auction-6' }),
+    );
+    expect(result).toEqual({
+      message: 'Auction end triggered successfully',
+      auctionId: 'auction-6',
+    });
+  });
+
+  it('should return already ended response for immediate end on ended auction', async () => {
+    const endedAuction = {
+      _id: 'auction-7',
+      createdBy: 'owner-1',
+      status: 'ENDED',
+    };
+    auctionModel.findById.mockResolvedValue(endedAuction as never);
+
+    await expect(
+      service.requestImmediateEnd('auction-7', 'owner-1'),
+    ).resolves.toEqual({
+      message: 'Auction is already ended',
+      auction: endedAuction,
+    });
+  });
+
+  it('should reject cancelAuction for non creator', async () => {
+    auctionModel.findById.mockResolvedValue({
+      _id: 'auction-8',
+      createdBy: 'owner-1',
+      status: 'ACTIVE',
+      paymentStatus: 'ACTIVE',
+    } as never);
+
+    await expect(service.cancelAuction('auction-8', 'other-user')).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
+  });
+
+  it('should return already cancelled response for cancelAuction', async () => {
+    const cancelledAuction = {
+      _id: 'auction-9',
+      createdBy: 'owner-1',
+      status: 'CANCELLED',
+      paymentStatus: 'ACTIVE',
+    };
+    auctionModel.findById.mockResolvedValue(cancelledAuction as never);
+
+    await expect(
+      service.cancelAuction('auction-9', 'owner-1'),
+    ).resolves.toEqual({
+      message: 'Auction is already cancelled',
+      auction: cancelledAuction,
+    });
+  });
 });

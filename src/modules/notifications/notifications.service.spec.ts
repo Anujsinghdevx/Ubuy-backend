@@ -77,6 +77,30 @@ describe('NotificationsService', () => {
     expect(result).toEqual({ _id: 'n1' });
   });
 
+  it('should create notification without dedupeKey', async () => {
+    notificationModel.create.mockResolvedValue({
+      _id: 'n2',
+      isRead: false,
+    } as never);
+
+    const result = await service.createNotification({
+      userId: 'u2',
+      type: 'SYSTEM',
+      title: 'Hello',
+      message: 'World',
+    });
+
+    expect(notificationModel.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: 'u2',
+        type: 'SYSTEM',
+        isRead: false,
+        metadata: {},
+      }),
+    );
+    expect(result).toEqual({ _id: 'n2', isRead: false });
+  });
+
   it('should normalize pagination and return listNotifications payload', async () => {
     const items = [{ _id: 'a' }, { _id: 'b' }];
     findChain.limit.mockResolvedValue(items as never);
@@ -136,5 +160,45 @@ describe('NotificationsService', () => {
         }),
       },
     );
+  });
+
+  it('should mark a single notification as read', async () => {
+    notificationModel.findOneAndUpdate.mockResolvedValue({
+      _id: 'n3',
+      isRead: true,
+    } as never);
+
+    await expect(service.markAsRead('u3', 'n3')).resolves.toEqual({
+      updated: true,
+      notification: {
+        _id: 'n3',
+        isRead: true,
+      },
+    });
+  });
+
+  it('should delete all notifications for a user', async () => {
+    notificationModel.deleteMany.mockResolvedValue({ deletedCount: 4 } as never);
+
+    await expect(service.deleteAllNotifications('u4')).resolves.toEqual({
+      deletedCount: 4,
+    });
+  });
+
+  it('should delete read notifications for a user', async () => {
+    notificationModel.deleteMany.mockResolvedValue({ deletedCount: 2 } as never);
+
+    await expect(service.deleteReadNotifications('u5')).resolves.toEqual({
+      deletedCount: 2,
+    });
+  });
+
+  it('should delete a single notification by id', async () => {
+    notificationModel.findOneAndDelete.mockResolvedValue({ _id: 'n6' } as never);
+
+    await expect(service.deleteNotification('u6', 'n6')).resolves.toEqual({
+      deleted: true,
+      notificationId: 'n6',
+    });
   });
 });
