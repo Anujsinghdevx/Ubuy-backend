@@ -1,17 +1,22 @@
 name: Smoke Tests (Service Containers)
 
 on:
-  pull_request:
+  push:
     branches:
-      - main
-      - master
+      - '**'
   workflow_dispatch:
-  schedule:
-    - cron: '30 2 * * *'
+    inputs:
+      suite:
+        description: Smoke suite to run
+        required: true
+        default: core
+        type: choice
+        options:
+          - core
+          - full
 
 jobs:
-  smoke-core-services:
-    if: github.event_name != 'schedule'
+  smoke-services:
     runs-on: ubuntu-latest
 
     services:
@@ -47,54 +52,13 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Run core smoke tests (service containers)
-        run: npm run test:smoke:ci
-        env:
-          NODE_ENV: test
-          PORT: 6000
-          MONGO_URI: mongodb://127.0.0.1:27017/ubuy_smoke_ci
-          REDIS_URL: redis://127.0.0.1:6379
-          JWT_SECRET: smoke-ci-jwt-secret
-
-  smoke-full-nightly-services:
-    if: github.event_name == 'schedule'
-    runs-on: ubuntu-latest
-
-    services:
-      mongodb:
-        image: mongo:7
-        ports:
-          - 27017:27017
-        options: >-
-          --health-cmd="echo 'db.runCommand({ ping: 1 })' | mongosh mongodb://localhost:27017/test --quiet"
-          --health-interval=10s
-          --health-timeout=5s
-          --health-retries=10
-      redis:
-        image: redis:7
-        ports:
-          - 6379:6379
-        options: >-
-          --health-cmd="redis-cli ping"
-          --health-interval=10s
-          --health-timeout=5s
-          --health-retries=10
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: npm
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Run full smoke tests (service containers)
-        run: npm run test:smoke:nightly
+      - name: Run selected smoke suite (service containers)
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.suite }}" = "full" ]; then
+            npm run test:smoke:nightly
+          else
+            npm run test:smoke:ci
+          fi
         env:
           NODE_ENV: test
           PORT: 6000

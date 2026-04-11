@@ -153,13 +153,15 @@ npm run test:smoke:nightly
 .github/workflows/smoke-tests.yml
 ```
 
-Uses external secrets (`MONGO_URI`, `REDIS_URL`, `JWT_SECRET`).
+Manual-only workflow (run from Actions tab), supports choosing core or full suite.
+Uses external secrets (`MONGO_URI`, `REDIS_URL`, `JWT_SECRET`) from repository secrets.
 
 ```text
 .github/workflows/smoke-tests-services.yml
 ```
 
-Uses GitHub Actions service containers (MongoDB + Redis) and does not require those external runtime secrets.
+Runs on push commits and manual dispatch, supports choosing core or full suite.
+Uses GitHub Actions service containers (MongoDB + Redis) and does not require external runtime secrets.
 
 ## Environment Variables
 
