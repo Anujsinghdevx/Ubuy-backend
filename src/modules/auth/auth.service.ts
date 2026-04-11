@@ -12,7 +12,10 @@ import { OAuth2Client } from 'google-auth-library';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { MailService } from './mail.service';
 import { InjectModel } from '@nestjs/mongoose';
-import { Auction, AuctionDocument } from '@/modules/auctions/schemas/auction.schema';
+import {
+  Auction,
+  AuctionDocument,
+} from '@/modules/auctions/schemas/auction.schema';
 import { Bid, BidDocument } from '@/modules/bids/schemas/bid.schema';
 import { Model, Types } from 'mongoose';
 
@@ -94,7 +97,8 @@ export class AuthService {
     const maxAttempts = 15;
 
     for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
-      const suffix = attempt === 0 ? '' : `_${Math.floor(1000 + Math.random() * 9000)}`;
+      const suffix =
+        attempt === 0 ? '' : `_${Math.floor(1000 + Math.random() * 9000)}`;
       const candidate = `${base}${suffix}`.slice(0, 30);
       const existing = await this.usersService.findByUsername(candidate);
 
@@ -215,7 +219,9 @@ export class AuthService {
     }
 
     if (body.username && body.username !== user.username) {
-      const existingUser = await this.usersService.findByUsername(body.username);
+      const existingUser = await this.usersService.findByUsername(
+        body.username,
+      );
 
       if (existingUser && String(existingUser._id) !== userId) {
         throw new BadRequestException('Username is already taken');
@@ -339,12 +345,17 @@ export class AuthService {
     await user.save();
 
     try {
-      await this.mailService.sendPasswordResetEmail(email, user.passwordResetCode);
+      await this.mailService.sendPasswordResetEmail(
+        email,
+        user.passwordResetCode,
+      );
     } catch (error) {
       this.logger.error(
         `Failed to send password reset email to ${email}: ${error instanceof Error ? error.message : 'Unknown error'}`,
       );
-      throw new InternalServerErrorException('Unable to send password reset code');
+      throw new InternalServerErrorException(
+        'Unable to send password reset code',
+      );
     }
 
     return {
@@ -372,12 +383,17 @@ export class AuthService {
       await user.save();
 
       try {
-        await this.mailService.sendVerificationEmail(email, user.verificationCode);
+        await this.mailService.sendVerificationEmail(
+          email,
+          user.verificationCode,
+        );
       } catch (error) {
         this.logger.error(
           `Failed to resend verification email to ${email}: ${error instanceof Error ? error.message : 'Unknown error'}`,
         );
-        throw new InternalServerErrorException('Unable to resend verification code');
+        throw new InternalServerErrorException(
+          'Unable to resend verification code',
+        );
       }
 
       return {
@@ -396,12 +412,17 @@ export class AuthService {
     await user.save();
 
     try {
-      await this.mailService.sendPasswordResetEmail(email, user.passwordResetCode);
+      await this.mailService.sendPasswordResetEmail(
+        email,
+        user.passwordResetCode,
+      );
     } catch (error) {
       this.logger.error(
         `Failed to resend password reset email to ${email}: ${error instanceof Error ? error.message : 'Unknown error'}`,
       );
-      throw new InternalServerErrorException('Unable to resend password reset code');
+      throw new InternalServerErrorException(
+        'Unable to resend password reset code',
+      );
     }
 
     return {
@@ -420,7 +441,10 @@ export class AuthService {
       throw new BadRequestException('Invalid reset code');
     }
 
-    if (!user.passwordResetCodeExpiry || user.passwordResetCodeExpiry < new Date()) {
+    if (
+      !user.passwordResetCodeExpiry ||
+      user.passwordResetCodeExpiry < new Date()
+    ) {
       throw new BadRequestException('Reset code expired');
     }
 
@@ -441,7 +465,10 @@ export class AuthService {
       throw new BadRequestException('Invalid reset code');
     }
 
-    if (!user.passwordResetCodeExpiry || user.passwordResetCodeExpiry < new Date()) {
+    if (
+      !user.passwordResetCodeExpiry ||
+      user.passwordResetCodeExpiry < new Date()
+    ) {
       throw new BadRequestException('Reset code expired');
     }
 
@@ -500,7 +527,9 @@ export class AuthService {
       });
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : 'Google token verification failed';
+        error instanceof Error
+          ? error.message
+          : 'Google token verification failed';
       throw new BadRequestException(`Invalid Google idToken: ${message}`);
     }
 
@@ -527,7 +556,8 @@ export class AuthService {
 
       if (!user) {
         const usernameSeed = email.split('@')[0] || payload.name || 'user';
-        const generatedUsername = await this.generateUniqueUsername(usernameSeed);
+        const generatedUsername =
+          await this.generateUniqueUsername(usernameSeed);
 
         const createdUser = await this.usersService.create({
           email,
@@ -563,7 +593,10 @@ export class AuthService {
         user.username = await this.generateUniqueUsername(usernameSeed);
       }
 
-      if (!user.verificationCodeExpiry || user.verificationCodeExpiry < new Date()) {
+      if (
+        !user.verificationCodeExpiry ||
+        user.verificationCodeExpiry < new Date()
+      ) {
         user.verificationCode = undefined;
         user.verificationCodeExpiry = undefined;
       }

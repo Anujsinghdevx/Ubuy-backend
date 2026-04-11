@@ -20,8 +20,7 @@ export class AppService {
             apiInfo: `${baseUrl}/api-info`,
             queueDashboard: `${baseUrl}/admin/queues`,
           }
-        : {
-          }),
+        : {}),
     };
 
     return {
@@ -67,9 +66,7 @@ export class AppService {
         baseUrl,
       },
       endpoints: {
-        health: [
-          { method: 'GET', path: '/health', auth: 'public' },
-        ],
+        health: [{ method: 'GET', path: '/health', auth: 'public' }],
         auth: [
           {
             method: 'GET',
@@ -81,18 +78,46 @@ export class AppService {
             path: `${versionPrefix}/auth/check-username-unique`,
             auth: 'public',
           },
-          { method: 'POST', path: `${versionPrefix}/auth/signup`, auth: 'public' },
-          { method: 'POST', path: `${versionPrefix}/auth/login`, auth: 'public' },
-          { method: 'POST', path: `${versionPrefix}/auth/google`, auth: 'public' },
-          { method: 'POST', path: `${versionPrefix}/auth/verify-email`, auth: 'public' },
+          {
+            method: 'POST',
+            path: `${versionPrefix}/auth/signup`,
+            auth: 'public',
+          },
+          {
+            method: 'POST',
+            path: `${versionPrefix}/auth/login`,
+            auth: 'public',
+          },
+          {
+            method: 'POST',
+            path: `${versionPrefix}/auth/google`,
+            auth: 'public',
+          },
+          {
+            method: 'POST',
+            path: `${versionPrefix}/auth/verify-email`,
+            auth: 'public',
+          },
           {
             method: 'POST',
             path: `${versionPrefix}/auth/forgot-password`,
             auth: 'public',
           },
-          { method: 'POST', path: `${versionPrefix}/auth/resend-code`, auth: 'public' },
-          { method: 'POST', path: `${versionPrefix}/auth/reset-code`, auth: 'public' },
-          { method: 'POST', path: `${versionPrefix}/auth/verify-code`, auth: 'public' },
+          {
+            method: 'POST',
+            path: `${versionPrefix}/auth/resend-code`,
+            auth: 'public',
+          },
+          {
+            method: 'POST',
+            path: `${versionPrefix}/auth/reset-code`,
+            auth: 'public',
+          },
+          {
+            method: 'POST',
+            path: `${versionPrefix}/auth/verify-code`,
+            auth: 'public',
+          },
           {
             method: 'POST',
             path: `${versionPrefix}/auth/reset-password`,
@@ -116,19 +141,35 @@ export class AppService {
           { method: 'GET', path: `${versionPrefix}/auth/me`, auth: 'jwt' },
         ],
         users: [
-          { method: 'GET', path: `${versionPrefix}/users/me/bid-stats`, auth: 'jwt' },
+          {
+            method: 'GET',
+            path: `${versionPrefix}/users/me/bid-stats`,
+            auth: 'jwt',
+          },
         ],
         auctions: [
           { method: 'POST', path: `${versionPrefix}/auctions`, auth: 'jwt' },
           { method: 'GET', path: `${versionPrefix}/auctions`, auth: 'public' },
-          { method: 'GET', path: `${versionPrefix}/auctions/active`, auth: 'public' },
-          { method: 'GET', path: `${versionPrefix}/auctions/me/bidded`, auth: 'jwt' },
+          {
+            method: 'GET',
+            path: `${versionPrefix}/auctions/active`,
+            auth: 'public',
+          },
+          {
+            method: 'GET',
+            path: `${versionPrefix}/auctions/me/bidded`,
+            auth: 'jwt',
+          },
           {
             method: 'GET',
             path: `${versionPrefix}/auctions/queue/status`,
             auth: 'jwt',
           },
-          { method: 'POST', path: `${versionPrefix}/auctions/:id/end`, auth: 'jwt' },
+          {
+            method: 'POST',
+            path: `${versionPrefix}/auctions/:id/end`,
+            auth: 'jwt',
+          },
           {
             method: 'POST',
             path: `${versionPrefix}/auctions/:id/cancel`,
@@ -149,7 +190,11 @@ export class AppService {
             path: `${versionPrefix}/auctions/:id/bids`,
             auth: 'jwt',
           },
-          { method: 'GET', path: `${versionPrefix}/auctions/:id`, auth: 'public' },
+          {
+            method: 'GET',
+            path: `${versionPrefix}/auctions/:id`,
+            auth: 'public',
+          },
         ],
         payments: [
           {
@@ -177,7 +222,11 @@ export class AppService {
           },
         ],
         notifications: [
-          { method: 'GET', path: `${versionPrefix}/notifications`, auth: 'jwt' },
+          {
+            method: 'GET',
+            path: `${versionPrefix}/notifications`,
+            auth: 'jwt',
+          },
           {
             method: 'GET',
             path: `${versionPrefix}/notifications/unread-count`,
@@ -194,9 +243,7 @@ export class AppService {
             auth: 'jwt',
           },
         ],
-        system: [
-          ...systemEndpoints,
-        ],
+        system: [...systemEndpoints],
       },
       websockets: {
         transport: 'socket.io',
@@ -204,7 +251,8 @@ export class AppService {
         events: ['joinAuction', 'leaveAuction', 'placeBid'],
       },
       notes: {
-        success: 'Use /docs as the canonical API contract and /api-info as an integration index.',
+        success:
+          'Use /docs as the canonical API contract and /api-info as an integration index.',
         healthCheck: `${baseUrl}/health`,
         ...(showAdminLinks
           ? {
@@ -212,8 +260,7 @@ export class AppService {
               docsJson: `${baseUrl}/docs-json`,
               queueDashboard: `${baseUrl}/admin/queues`,
             }
-          : {
-            }),
+          : {}),
         versionedApiBase: `${baseUrl}${versionPrefix}`,
       },
     };

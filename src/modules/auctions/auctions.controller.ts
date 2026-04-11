@@ -38,7 +38,15 @@ export class AuctionsController {
 
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Create a new auction' })
-  @ApiResponse({ status: 201, description: 'Auction created successfully', example: { id: '507f1f77bcf86cd799439011', title: 'Vintage Leather Jacket', status: 'scheduled' } })
+  @ApiResponse({
+    status: 201,
+    description: 'Auction created successfully',
+    example: {
+      id: '507f1f77bcf86cd799439011',
+      title: 'Vintage Leather Jacket',
+      status: 'scheduled',
+    },
+  })
   @UseGuards(JwtAuthGuard)
   @Post()
   async createAuction(
@@ -55,12 +63,26 @@ export class AuctionsController {
   @ApiOperation({ summary: 'List all auctions' })
   @ApiQuery({ name: 'page', required: false, type: Number, example: 1 })
   @ApiQuery({ name: 'limit', required: false, type: Number, example: 20 })
-  @ApiResponse({ status: 200, description: 'All auctions retrieved', example: { page: 1, limit: 20, total: 42, totalPages: 3, data: [{ id: '507f1f77bcf86cd799439011', title: 'Vintage Jacket', currentBid: 5500, status: 'active' }] } })
+  @ApiResponse({
+    status: 200,
+    description: 'All auctions retrieved',
+    example: {
+      page: 1,
+      limit: 20,
+      total: 42,
+      totalPages: 3,
+      data: [
+        {
+          id: '507f1f77bcf86cd799439011',
+          title: 'Vintage Jacket',
+          currentBid: 5500,
+          status: 'active',
+        },
+      ],
+    },
+  })
   @Get()
-  async getAll(
-    @Query('page') page?: string,
-    @Query('limit') limit?: string,
-  ) {
+  async getAll(@Query('page') page?: string, @Query('limit') limit?: string) {
     const pageNumber = page ? Number(page) : undefined;
     const limitNumber = limit ? Number(limit) : undefined;
 
@@ -73,7 +95,23 @@ export class AuctionsController {
   @ApiOperation({ summary: 'List active auctions' })
   @ApiQuery({ name: 'page', required: false, type: Number, example: 1 })
   @ApiQuery({ name: 'limit', required: false, type: Number, example: 20 })
-  @ApiResponse({ status: 200, description: 'Active auctions only', example: { page: 1, limit: 20, total: 11, totalPages: 1, data: [{ id: '507f1f77bcf86cd799439011', title: 'Running Auction', endTime: '2026-04-12T18:00:00Z' }] } })
+  @ApiResponse({
+    status: 200,
+    description: 'Active auctions only',
+    example: {
+      page: 1,
+      limit: 20,
+      total: 11,
+      totalPages: 1,
+      data: [
+        {
+          id: '507f1f77bcf86cd799439011',
+          title: 'Running Auction',
+          endTime: '2026-04-12T18:00:00Z',
+        },
+      ],
+    },
+  })
   @Get('active')
   async getActive(
     @Query('page') page?: string,
@@ -89,10 +127,19 @@ export class AuctionsController {
   }
 
   @ApiOperation({ summary: 'List auctions by category' })
-  @ApiQuery({ name: 'category', required: true, type: String, example: 'fashion' })
+  @ApiQuery({
+    name: 'category',
+    required: true,
+    type: String,
+    example: 'fashion',
+  })
   @ApiQuery({ name: 'page', required: false, type: Number, example: 1 })
   @ApiQuery({ name: 'limit', required: false, type: Number, example: 20 })
-  @ApiResponse({ status: 200, description: 'Category auctions', example: { page: 1, limit: 20, total: 6, totalPages: 1, data: [] } })
+  @ApiResponse({
+    status: 200,
+    description: 'Category auctions',
+    example: { page: 1, limit: 20, total: 6, totalPages: 1, data: [] },
+  })
   @Get('by-category')
   async getByCategory(
     @Query('category') category?: string,
@@ -113,7 +160,11 @@ export class AuctionsController {
   @ApiOperation({ summary: 'List auctions created by authenticated user' })
   @ApiQuery({ name: 'page', required: false, type: Number, example: 1 })
   @ApiQuery({ name: 'limit', required: false, type: Number, example: 20 })
-  @ApiResponse({ status: 200, description: 'My auctions list', example: { page: 1, limit: 20, total: 3, totalPages: 1, data: [] } })
+  @ApiResponse({
+    status: 200,
+    description: 'My auctions list',
+    example: { page: 1, limit: 20, total: 3, totalPages: 1, data: [] },
+  })
   @UseGuards(JwtAuthGuard)
   @Get('me/created')
   async getMyCreatedAuctions(
@@ -139,7 +190,28 @@ export class AuctionsController {
   @ApiOperation({ summary: 'List auctions where authenticated user has bids' })
   @ApiQuery({ name: 'page', required: false, type: Number, example: 1 })
   @ApiQuery({ name: 'limit', required: false, type: Number, example: 20 })
-  @ApiResponse({ status: 200, description: 'User bidded auctions', example: { page: 1, limit: 20, total: 1, totalPages: 1, biddedAuctions: [{ id: '507f1f77bcf86cd799439011', title: 'Jacket', winnerId: '507f1f77bcf86cd799439012', myBid: { highest: 5500, lastAmount: 5500, lastBidAt: '2026-04-04T12:00:00.000Z' } }] } })
+  @ApiResponse({
+    status: 200,
+    description: 'User bidded auctions',
+    example: {
+      page: 1,
+      limit: 20,
+      total: 1,
+      totalPages: 1,
+      biddedAuctions: [
+        {
+          id: '507f1f77bcf86cd799439011',
+          title: 'Jacket',
+          winnerId: '507f1f77bcf86cd799439012',
+          myBid: {
+            highest: 5500,
+            lastAmount: 5500,
+            lastBidAt: '2026-04-04T12:00:00.000Z',
+          },
+        },
+      ],
+    },
+  })
   @UseGuards(JwtAuthGuard)
   @Get('me/bidded')
   async getMyBiddedAuctions(
@@ -163,7 +235,11 @@ export class AuctionsController {
 
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get queue state for auction lifecycle jobs' })
-  @ApiResponse({ status: 200, description: 'Queue status', example: { pending: 3, active: 1, completed: 15 } })
+  @ApiResponse({
+    status: 200,
+    description: 'Queue status',
+    example: { pending: 3, active: 1, completed: 15 },
+  })
   @UseGuards(JwtAuthGuard)
   @Get('queue/status')
   async getQueueStatus() {
@@ -172,7 +248,14 @@ export class AuctionsController {
 
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Request immediate auction ending' })
-  @ApiResponse({ status: 200, description: 'Auction end requested', example: { message: 'Auction end request queued', auctionId: '507f1f77bcf86cd799439011' } })
+  @ApiResponse({
+    status: 200,
+    description: 'Auction end requested',
+    example: {
+      message: 'Auction end request queued',
+      auctionId: '507f1f77bcf86cd799439011',
+    },
+  })
   @UseGuards(JwtAuthGuard)
   @Post(':id/end')
   async endAuctionNow(
@@ -188,7 +271,14 @@ export class AuctionsController {
 
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Cancel auction as owner' })
-  @ApiResponse({ status: 200, description: 'Auction cancelled', example: { message: 'Auction cancelled successfully', auctionId: '507f1f77bcf86cd799439011' } })
+  @ApiResponse({
+    status: 200,
+    description: 'Auction cancelled',
+    example: {
+      message: 'Auction cancelled successfully',
+      auctionId: '507f1f77bcf86cd799439011',
+    },
+  })
   @UseGuards(JwtAuthGuard)
   @Post(':id/cancel')
   async cancelAuction(
@@ -204,7 +294,14 @@ export class AuctionsController {
 
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Delete auction as owner' })
-  @ApiResponse({ status: 200, description: 'Auction deleted', example: { message: 'Auction deleted successfully', auctionId: '507f1f77bcf86cd799439011' } })
+  @ApiResponse({
+    status: 200,
+    description: 'Auction deleted',
+    example: {
+      message: 'Auction deleted successfully',
+      auctionId: '507f1f77bcf86cd799439011',
+    },
+  })
   @UseGuards(JwtAuthGuard)
   @Delete(':id')
   async deleteAuction(
@@ -220,7 +317,14 @@ export class AuctionsController {
 
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Confirm winner payment for completed auction' })
-  @ApiResponse({ status: 200, description: 'Winner payment confirmed', example: { message: 'Payment confirmed', auctionId: '507f1f77bcf86cd799439011' } })
+  @ApiResponse({
+    status: 200,
+    description: 'Winner payment confirmed',
+    example: {
+      message: 'Payment confirmed',
+      auctionId: '507f1f77bcf86cd799439011',
+    },
+  })
   @UseGuards(JwtAuthGuard)
   @Post(':id/payment/confirm')
   async confirmWinnerPayment(
@@ -236,7 +340,19 @@ export class AuctionsController {
 
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Place bid for a specific auction' })
-  @ApiResponse({ status: 201, description: 'Bid placed successfully', example: { ok: true, data: { id: '507f1f77bcf86cd799439011', currentPrice: 5500, highestBidder: '507f1f77bcf86cd799439099', status: 'ACTIVE' } } })
+  @ApiResponse({
+    status: 201,
+    description: 'Bid placed successfully',
+    example: {
+      ok: true,
+      data: {
+        id: '507f1f77bcf86cd799439011',
+        currentPrice: 5500,
+        highestBidder: '507f1f77bcf86cd799439099',
+        status: 'ACTIVE',
+      },
+    },
+  })
   @ApiResponse({ status: 400, description: 'Invalid bid or auction state' })
   @UseGuards(JwtAuthGuard)
   @Post(':id/bids')
@@ -266,7 +382,11 @@ export class AuctionsController {
 
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Handle payment-expiry decision for an auction' })
-  @ApiResponse({ status: 200, description: 'Decision processed', example: { message: 'Payment decision recorded', action: 'PUSH_NEXT' } })
+  @ApiResponse({
+    status: 200,
+    description: 'Decision processed',
+    example: { message: 'Payment decision recorded', action: 'PUSH_NEXT' },
+  })
   @UseGuards(JwtAuthGuard)
   @Post(':id/payment-expiry/decision')
   async handlePaymentExpiryDecision(
@@ -287,7 +407,22 @@ export class AuctionsController {
 
   @ApiOperation({ summary: 'Get top bidders for an auction' })
   @ApiQuery({ name: 'limit', required: false, type: Number, example: 5 })
-  @ApiResponse({ status: 200, description: 'Top bidders list', example: { auctionId: '507f1f77bcf86cd799439011', total: 3, topBidders: [{ userId: '507f1f77bcf86cd799439099', bidderName: 'Anuj', amount: 5500, time: '2026-04-09T10:32:10.000Z' }] } })
+  @ApiResponse({
+    status: 200,
+    description: 'Top bidders list',
+    example: {
+      auctionId: '507f1f77bcf86cd799439011',
+      total: 3,
+      topBidders: [
+        {
+          userId: '507f1f77bcf86cd799439099',
+          bidderName: 'Anuj',
+          amount: 5500,
+          time: '2026-04-09T10:32:10.000Z',
+        },
+      ],
+    },
+  })
   @Get(':id/top-bidders')
   async getTopBiddersByAuction(
     @Param('id') auctionId: string,
@@ -302,7 +437,17 @@ export class AuctionsController {
   }
 
   @ApiOperation({ summary: 'Get auction details by id' })
-  @ApiResponse({ status: 200, description: 'Auction details', example: { id: '507f1f77bcf86cd799439011', title: 'Vintage Jacket', currentBid: 5500, status: 'active', endTime: '2026-04-12T18:00:00Z' } })
+  @ApiResponse({
+    status: 200,
+    description: 'Auction details',
+    example: {
+      id: '507f1f77bcf86cd799439011',
+      title: 'Vintage Jacket',
+      currentBid: 5500,
+      status: 'active',
+      endTime: '2026-04-12T18:00:00Z',
+    },
+  })
   @Get(':id')
   async getById(@Param('id') id: string) {
     return this.auctionsService.findById(id);

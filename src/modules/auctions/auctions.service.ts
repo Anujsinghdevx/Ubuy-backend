@@ -1,8 +1,4 @@
-import {
-  Injectable,
-  BadRequestException,
-  Logger,
-} from '@nestjs/common';
+import { Injectable, BadRequestException, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Auction, AuctionDocument } from './schemas/auction.schema';
 import { Model, PipelineStage, Types } from 'mongoose';
@@ -14,7 +10,10 @@ import { PaymentExpiryDecisionAction } from './dto/payment-expiry-decision.dto';
 import { BidsGateway } from '@/modules/bids/bids.gateway';
 import { NotificationsService } from '@/modules/notifications/notifications.service';
 import { User, UserDocument } from '@/modules/users/schemas/user.schema';
-import { Wishlist, WishlistDocument } from '@/modules/wishlist/schemas/wishlist.schema';
+import {
+  Wishlist,
+  WishlistDocument,
+} from '@/modules/wishlist/schemas/wishlist.schema';
 
 const PAYMENT_REMINDER_DELAY_MS = 12 * 60 * 60 * 1000;
 const PAYMENT_EXPIRY_DELAY_MS = 24 * 60 * 60 * 1000;
@@ -401,16 +400,17 @@ export class AuctionsService {
       cancelledBy: actorUserId,
     });
 
-    const creatorNotification = await this.notificationsService.createNotification({
-      userId: actorUserId,
-      type: 'SYSTEM',
-      title: 'Auction cancelled',
-      message: `You cancelled auction ${auctionId}.`,
-      metadata: {
-        auctionId,
-      },
-      dedupeKey: `auctionCancelled:${auctionId}:${actorUserId}`,
-    });
+    const creatorNotification =
+      await this.notificationsService.createNotification({
+        userId: actorUserId,
+        type: 'SYSTEM',
+        title: 'Auction cancelled',
+        message: `You cancelled auction ${auctionId}.`,
+        metadata: {
+          auctionId,
+        },
+        dedupeKey: `auctionCancelled:${auctionId}:${actorUserId}`,
+      });
 
     this.bidsGateway.server
       .to(`user:${actorUserId}`)
@@ -431,8 +431,8 @@ export class AuctionsService {
 
     await Promise.all(
       usersToNotify.map(async (userId) => {
-        const bidderNotification = await this.notificationsService.createNotification(
-          {
+        const bidderNotification =
+          await this.notificationsService.createNotification({
             userId,
             type: 'SYSTEM',
             title: 'Auction cancelled',
@@ -442,8 +442,7 @@ export class AuctionsService {
               cancelledBy: actorUserId,
             },
             dedupeKey: `auctionCancelledBidder:${auctionId}:${userId}`,
-          },
-        );
+          });
 
         this.bidsGateway.server
           .to(`user:${userId}`)
@@ -457,7 +456,10 @@ export class AuctionsService {
     };
   }
 
-  async scheduleWinnerPaymentLifecycle(auctionId: string, winnerUserId: string) {
+  async scheduleWinnerPaymentLifecycle(
+    auctionId: string,
+    winnerUserId: string,
+  ) {
     const now = Date.now();
     const dueAt = new Date(now + PAYMENT_EXPIRY_DELAY_MS);
 
@@ -486,7 +488,10 @@ export class AuctionsService {
     return { paymentDueAt: dueAt };
   }
 
-  async clearWinnerPaymentLifecycleJobs(auctionId: string, winnerUserId: string) {
+  async clearWinnerPaymentLifecycleJobs(
+    auctionId: string,
+    winnerUserId: string,
+  ) {
     const reminderJobId = `paymentReminder-${auctionId}-${winnerUserId}`;
     const expiredJobId = `paymentExpired-${auctionId}-${winnerUserId}`;
 
@@ -495,10 +500,7 @@ export class AuctionsService {
       this.auctionQueue.getJob(expiredJobId),
     ]);
 
-    await Promise.all([
-      reminderJob?.remove(),
-      expiredJob?.remove(),
-    ]);
+    await Promise.all([reminderJob?.remove(), expiredJob?.remove()]);
   }
 
   async confirmWinnerPayment(auctionId: string, userId: string) {
@@ -529,34 +531,36 @@ export class AuctionsService {
     await this.clearWinnerPaymentLifecycleJobs(auctionId, userId);
 
     try {
-      const winnerNotification = await this.notificationsService.createNotification({
-        userId,
-        type: 'PAYMENT_SUCCESS',
-        title: 'Payment successful',
-        message: `Payment confirmed for auction ${auctionId}.`,
-        metadata: {
-          auctionId,
-          paymentConfirmedBy: userId,
-        },
-        dedupeKey: `manualPaymentSuccess:${auctionId}:${userId}`,
-      });
+      const winnerNotification =
+        await this.notificationsService.createNotification({
+          userId,
+          type: 'PAYMENT_SUCCESS',
+          title: 'Payment successful',
+          message: `Payment confirmed for auction ${auctionId}.`,
+          metadata: {
+            auctionId,
+            paymentConfirmedBy: userId,
+          },
+          dedupeKey: `manualPaymentSuccess:${auctionId}:${userId}`,
+        });
 
       this.bidsGateway.server
         .to(`user:${userId}`)
         .emit('notification:new', winnerNotification);
 
       if (auction.createdBy !== userId) {
-        const creatorNotification = await this.notificationsService.createNotification({
-          userId: auction.createdBy,
-          type: 'SYSTEM',
-          title: 'Winner payment received',
-          message: `Winner payment is confirmed for auction ${auctionId}.`,
-          metadata: {
-            auctionId,
-            winner: userId,
-          },
-          dedupeKey: `manualCreatorPaymentReceived:${auctionId}:${auction.createdBy}`,
-        });
+        const creatorNotification =
+          await this.notificationsService.createNotification({
+            userId: auction.createdBy,
+            type: 'SYSTEM',
+            title: 'Winner payment received',
+            message: `Winner payment is confirmed for auction ${auctionId}.`,
+            metadata: {
+              auctionId,
+              winner: userId,
+            },
+            dedupeKey: `manualCreatorPaymentReceived:${auctionId}:${auction.createdBy}`,
+          });
 
         this.bidsGateway.server
           .to(`user:${auction.createdBy}`)
@@ -693,7 +697,9 @@ export class AuctionsService {
     }
 
     if (auction.createdBy !== creatorUserId) {
-      throw new BadRequestException('Only auction creator can take this action');
+      throw new BadRequestException(
+        'Only auction creator can take this action',
+      );
     }
 
     if (auction.paymentStatus === 'PAID') {
@@ -714,34 +720,36 @@ export class AuctionsService {
       );
 
       try {
-        const winnerNotification = await this.notificationsService.createNotification({
-          userId: currentWinner,
-          type: 'SYSTEM',
-          title: 'Payment window extended',
-          message: `Payment deadline for auction ${auctionId} has been extended by the creator.`,
-          metadata: {
-            auctionId,
-            paymentDueAt: lifecycle.paymentDueAt,
-          },
-          dedupeKey: `paymentExtended:${auctionId}:${currentWinner}`,
-        });
+        const winnerNotification =
+          await this.notificationsService.createNotification({
+            userId: currentWinner,
+            type: 'SYSTEM',
+            title: 'Payment window extended',
+            message: `Payment deadline for auction ${auctionId} has been extended by the creator.`,
+            metadata: {
+              auctionId,
+              paymentDueAt: lifecycle.paymentDueAt,
+            },
+            dedupeKey: `paymentExtended:${auctionId}:${currentWinner}`,
+          });
 
         this.bidsGateway.server
           .to(`user:${currentWinner}`)
           .emit('notification:new', winnerNotification);
 
-        const creatorNotification = await this.notificationsService.createNotification({
-          userId: creatorUserId,
-          type: 'SYSTEM',
-          title: 'Payment window extended',
-          message: `You extended payment deadline for winner on auction ${auctionId}.`,
-          metadata: {
-            auctionId,
-            winnerUserId: currentWinner,
-            paymentDueAt: lifecycle.paymentDueAt,
-          },
-          dedupeKey: `creatorPaymentExtended:${auctionId}:${creatorUserId}`,
-        });
+        const creatorNotification =
+          await this.notificationsService.createNotification({
+            userId: creatorUserId,
+            type: 'SYSTEM',
+            title: 'Payment window extended',
+            message: `You extended payment deadline for winner on auction ${auctionId}.`,
+            metadata: {
+              auctionId,
+              winnerUserId: currentWinner,
+              paymentDueAt: lifecycle.paymentDueAt,
+            },
+            dedupeKey: `creatorPaymentExtended:${auctionId}:${creatorUserId}`,
+          });
 
         this.bidsGateway.server
           .to(`user:${creatorUserId}`)
@@ -779,55 +787,58 @@ export class AuctionsService {
     );
 
     try {
-      const previousWinnerNotification = await this.notificationsService.createNotification({
-        userId: currentWinner,
-        type: 'SYSTEM',
-        title: 'Winner changed',
-        message: `You are no longer the winner for auction ${auctionId}.`,
-        metadata: {
-          auctionId,
-          reason: 'CREATOR_DECISION_PUSH_NEXT',
-          newWinner: switched.nextBidder.userId,
-        },
-        dedupeKey: `winnerChangedOut:${auctionId}:${currentWinner}`,
-      });
+      const previousWinnerNotification =
+        await this.notificationsService.createNotification({
+          userId: currentWinner,
+          type: 'SYSTEM',
+          title: 'Winner changed',
+          message: `You are no longer the winner for auction ${auctionId}.`,
+          metadata: {
+            auctionId,
+            reason: 'CREATOR_DECISION_PUSH_NEXT',
+            newWinner: switched.nextBidder.userId,
+          },
+          dedupeKey: `winnerChangedOut:${auctionId}:${currentWinner}`,
+        });
 
       this.bidsGateway.server
         .to(`user:${currentWinner}`)
         .emit('notification:new', previousWinnerNotification);
 
-      const newWinnerNotification = await this.notificationsService.createNotification({
-        userId: switched.nextBidder.userId,
-        type: 'AUCTION_WON',
-        title: 'You are now the winner',
-        message: `You are now selected as winner for auction ${auctionId}.`,
-        metadata: {
-          auctionId,
-          finalPrice: switched.nextBidder.amount,
-          paymentPath: `/payments/checkout?auctionId=${auctionId}`,
-          paymentDueAt: lifecycle.paymentDueAt,
-        },
-        dedupeKey: `winnerReassignedManual:${auctionId}:${switched.nextBidder.userId}`,
-      });
+      const newWinnerNotification =
+        await this.notificationsService.createNotification({
+          userId: switched.nextBidder.userId,
+          type: 'AUCTION_WON',
+          title: 'You are now the winner',
+          message: `You are now selected as winner for auction ${auctionId}.`,
+          metadata: {
+            auctionId,
+            finalPrice: switched.nextBidder.amount,
+            paymentPath: `/payments/checkout?auctionId=${auctionId}`,
+            paymentDueAt: lifecycle.paymentDueAt,
+          },
+          dedupeKey: `winnerReassignedManual:${auctionId}:${switched.nextBidder.userId}`,
+        });
 
       this.bidsGateway.server
         .to(`user:${switched.nextBidder.userId}`)
         .emit('notification:new', newWinnerNotification);
 
-      const creatorNotification = await this.notificationsService.createNotification({
-        userId: creatorUserId,
-        type: 'SYSTEM',
-        title: 'Winner switched',
-        message: `Winner has been switched to next eligible bidder for auction ${auctionId}.`,
-        metadata: {
-          auctionId,
-          previousWinner: currentWinner,
-          newWinner: switched.nextBidder.userId,
-          amount: switched.nextBidder.amount,
-          paymentDueAt: lifecycle.paymentDueAt,
-        },
-        dedupeKey: `creatorWinnerSwitched:${auctionId}:${creatorUserId}`,
-      });
+      const creatorNotification =
+        await this.notificationsService.createNotification({
+          userId: creatorUserId,
+          type: 'SYSTEM',
+          title: 'Winner switched',
+          message: `Winner has been switched to next eligible bidder for auction ${auctionId}.`,
+          metadata: {
+            auctionId,
+            previousWinner: currentWinner,
+            newWinner: switched.nextBidder.userId,
+            amount: switched.nextBidder.amount,
+            paymentDueAt: lifecycle.paymentDueAt,
+          },
+          dedupeKey: `creatorWinnerSwitched:${auctionId}:${creatorUserId}`,
+        });
 
       this.bidsGateway.server
         .to(`user:${creatorUserId}`)
@@ -1036,22 +1047,22 @@ export class AuctionsService {
         },
       ]),
       this.bidModel.aggregate<{
-      _id: string;
-      lastBidAt: Date;
-      highestMyBid: number;
-      lastBidAmount: number;
-    }>([
-      ...baseBidPipeline,
-      {
-        $sort: { lastBidAt: -1 },
-      },
-      {
-        $skip: pagination.skip,
-      },
-      {
-        $limit: pagination.limit,
-      },
-    ]),
+        _id: string;
+        lastBidAt: Date;
+        highestMyBid: number;
+        lastBidAmount: number;
+      }>([
+        ...baseBidPipeline,
+        {
+          $sort: { lastBidAt: -1 },
+        },
+        {
+          $skip: pagination.skip,
+        },
+        {
+          $limit: pagination.limit,
+        },
+      ]),
     ]);
 
     const total = countSummary[0]?.total ?? 0;
@@ -1105,7 +1116,9 @@ export class AuctionsService {
       },
     ]);
 
-    const auctionById = new Map(auctions.map((auction) => [String(auction._id), auction]));
+    const auctionById = new Map(
+      auctions.map((auction) => [String(auction._id), auction]),
+    );
     const winnerByAuctionId = new Map(
       winnerSummary.map((item) => [item._id, item.winnerId]),
     );

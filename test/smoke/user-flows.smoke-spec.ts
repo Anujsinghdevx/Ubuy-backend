@@ -8,7 +8,10 @@ import * as bcrypt from 'bcrypt';
 import { getQueueToken } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import { AppModule } from '../../src/app.module';
-import { User, UserDocument } from '../../src/modules/users/schemas/user.schema';
+import {
+  User,
+  UserDocument,
+} from '../../src/modules/users/schemas/user.schema';
 import {
   Notification,
   NotificationDocument,
@@ -110,9 +113,11 @@ describe('Smoke User Flows Suite', () => {
       await auctionQueue.close();
     }
 
-    const worker = (auctionProcessor as unknown as {
-      worker?: { close: () => Promise<void> };
-    }).worker;
+    const worker = (
+      auctionProcessor as unknown as {
+        worker?: { close: () => Promise<void> };
+      }
+    ).worker;
 
     if (worker) {
       await worker.close();

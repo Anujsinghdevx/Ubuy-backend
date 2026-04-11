@@ -18,7 +18,12 @@ import {
   NOTIFICATION_TYPES,
   NotificationType,
 } from './schemas/notification.schema';
-import { ApiBearerAuth, ApiOperation, ApiTags, ApiResponse } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiOperation,
+  ApiTags,
+  ApiResponse,
+} from '@nestjs/swagger';
 
 @ApiTags('notifications')
 @ApiBearerAuth()
@@ -28,7 +33,22 @@ export class NotificationsController {
   constructor(private readonly notificationsService: NotificationsService) {}
 
   @ApiOperation({ summary: 'List notifications for authenticated user' })
-  @ApiResponse({ status: 200, description: 'Notifications list', example: { data: [{ id: '507f1f77bcf86cd799439011', message: 'Your bid was outbid', isRead: false, type: 'bid', timestamp: '2026-04-04T10:30:00Z' }], total: 5 } })
+  @ApiResponse({
+    status: 200,
+    description: 'Notifications list',
+    example: {
+      data: [
+        {
+          id: '507f1f77bcf86cd799439011',
+          message: 'Your bid was outbid',
+          isRead: false,
+          type: 'bid',
+          timestamp: '2026-04-04T10:30:00Z',
+        },
+      ],
+      total: 5,
+    },
+  })
   @Get()
   async list(
     @CurrentUser() user: AuthenticatedUser | undefined,
@@ -61,7 +81,11 @@ export class NotificationsController {
   }
 
   @ApiOperation({ summary: 'Get unread notifications count' })
-  @ApiResponse({ status: 200, description: 'Unread count', example: { unreadCount: 3 } })
+  @ApiResponse({
+    status: 200,
+    description: 'Unread count',
+    example: { unreadCount: 3 },
+  })
   @Get('unread-count')
   async unreadCount(@CurrentUser() user: AuthenticatedUser | undefined) {
     if (!user) {
@@ -72,7 +96,11 @@ export class NotificationsController {
   }
 
   @ApiOperation({ summary: 'Mark one notification as read' })
-  @ApiResponse({ status: 200, description: 'Notification marked as read', example: { success: true, id: '507f1f77bcf86cd799439011' } })
+  @ApiResponse({
+    status: 200,
+    description: 'Notification marked as read',
+    example: { success: true, id: '507f1f77bcf86cd799439011' },
+  })
   @Patch(':id/read')
   async markAsRead(
     @CurrentUser() user: AuthenticatedUser | undefined,
@@ -86,7 +114,11 @@ export class NotificationsController {
   }
 
   @ApiOperation({ summary: 'Mark all notifications as read' })
-  @ApiResponse({ status: 200, description: 'All notifications marked as read', example: { success: true, updated: 5 } })
+  @ApiResponse({
+    status: 200,
+    description: 'All notifications marked as read',
+    example: { success: true, updated: 5 },
+  })
   @Patch('read-all')
   async markAllAsRead(@CurrentUser() user: AuthenticatedUser | undefined) {
     if (!user) {
@@ -97,7 +129,11 @@ export class NotificationsController {
   }
 
   @ApiOperation({ summary: 'Delete all read notifications' })
-  @ApiResponse({ status: 200, description: 'Read notifications deleted', example: { deletedCount: 4 } })
+  @ApiResponse({
+    status: 200,
+    description: 'Read notifications deleted',
+    example: { deletedCount: 4 },
+  })
   @Delete('read')
   async deleteReadNotifications(
     @CurrentUser() user: AuthenticatedUser | undefined,
@@ -110,7 +146,11 @@ export class NotificationsController {
   }
 
   @ApiOperation({ summary: 'Delete all notifications for authenticated user' })
-  @ApiResponse({ status: 200, description: 'All notifications deleted', example: { deletedCount: 12 } })
+  @ApiResponse({
+    status: 200,
+    description: 'All notifications deleted',
+    example: { deletedCount: 12 },
+  })
   @Delete()
   async deleteAllNotifications(
     @CurrentUser() user: AuthenticatedUser | undefined,
@@ -123,7 +163,11 @@ export class NotificationsController {
   }
 
   @ApiOperation({ summary: 'Delete one notification' })
-  @ApiResponse({ status: 200, description: 'Notification deleted', example: { deleted: true, notificationId: '507f1f77bcf86cd799439011' } })
+  @ApiResponse({
+    status: 200,
+    description: 'Notification deleted',
+    example: { deleted: true, notificationId: '507f1f77bcf86cd799439011' },
+  })
   @Delete(':id')
   async deleteNotification(
     @CurrentUser() user: AuthenticatedUser | undefined,
@@ -133,6 +177,9 @@ export class NotificationsController {
       throw new UnauthorizedException('User not authenticated');
     }
 
-    return this.notificationsService.deleteNotification(user.userId, notificationId);
+    return this.notificationsService.deleteNotification(
+      user.userId,
+      notificationId,
+    );
   }
 }

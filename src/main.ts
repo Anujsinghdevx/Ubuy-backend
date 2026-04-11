@@ -99,7 +99,10 @@ async function bootstrap() {
 
   Logger.log(`Server is running on: ${await app.getUrl()}`, 'Bootstrap');
   if (!isProduction || enableAdminTools) {
-    Logger.log(`BullMQ dashboard: ${await app.getUrl()}/admin/queues`, 'Bootstrap');
+    Logger.log(
+      `BullMQ dashboard: ${await app.getUrl()}/admin/queues`,
+      'Bootstrap',
+    );
   }
 }
 void bootstrap();

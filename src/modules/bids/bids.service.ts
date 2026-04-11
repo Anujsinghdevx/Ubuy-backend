@@ -97,7 +97,9 @@ export class BidsService {
       );
 
       if (!updatedAuction) {
-        throw new Error('Another higher bid was already placed. Try a higher amount');
+        throw new Error(
+          'Another higher bid was already placed. Try a higher amount',
+        );
       }
 
       await this.bidModel.create({
@@ -130,14 +132,15 @@ export class BidsService {
           .emit('outBid', outBidPayload);
 
         try {
-          const notification = await this.notificationsService.createNotification({
-            userId: previousHighestBidder,
-            type: 'OUTBID',
-            title: 'You were outbid',
-            message: `Your bid on auction ${auctionId} was outbid by a higher amount.`,
-            metadata: outBidPayload,
-            dedupeKey: `outBid:${auctionId}:${previousHighestBidder}:${amount}`,
-          });
+          const notification =
+            await this.notificationsService.createNotification({
+              userId: previousHighestBidder,
+              type: 'OUTBID',
+              title: 'You were outbid',
+              message: `Your bid on auction ${auctionId} was outbid by a higher amount.`,
+              metadata: outBidPayload,
+              dedupeKey: `outBid:${auctionId}:${previousHighestBidder}:${amount}`,
+            });
 
           this.bidsGateway.server
             .to(`user:${previousHighestBidder}`)

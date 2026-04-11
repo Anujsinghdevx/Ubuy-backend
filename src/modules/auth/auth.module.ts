@@ -7,7 +7,10 @@ import { JwtStrategy } from './strategies/jwt.strategy';
 import { UsersModule } from '@/modules/users/users.module';
 import { MailService } from './mail.service';
 import { MongooseModule } from '@nestjs/mongoose';
-import { Auction, AuctionSchema } from '@/modules/auctions/schemas/auction.schema';
+import {
+  Auction,
+  AuctionSchema,
+} from '@/modules/auctions/schemas/auction.schema';
 import { Bid, BidSchema } from '@/modules/bids/schemas/bid.schema';
 
 @Module({

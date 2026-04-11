@@ -127,14 +127,19 @@ export class HealthService {
     }
 
     const redisUrl = this.configService.get<string>('REDIS_URL');
-    const redisHost = this.configService.get<string>('REDIS_HOST') ?? '127.0.0.1';
-    const redisPort = Number(this.configService.get<string>('REDIS_PORT') ?? 6379);
+    const redisHost =
+      this.configService.get<string>('REDIS_HOST') ?? '127.0.0.1';
+    const redisPort = Number(
+      this.configService.get<string>('REDIS_PORT') ?? 6379,
+    );
 
     return {
       status: 'up',
       details: {
         requiredPresent: true,
-        redisConfigSource: redisUrl ? 'REDIS_URL' : 'REDIS_HOST/REDIS_PORT defaults',
+        redisConfigSource: redisUrl
+          ? 'REDIS_URL'
+          : 'REDIS_HOST/REDIS_PORT defaults',
         redisHost,
         redisPort,
       },

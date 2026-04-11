@@ -1,8 +1,15 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { Wishlist, WishlistDocument } from './schemas/wishlist.schema';
-import { Auction, AuctionDocument } from '@/modules/auctions/schemas/auction.schema';
+import {
+  Auction,
+  AuctionDocument,
+} from '@/modules/auctions/schemas/auction.schema';
 import { User, UserDocument } from '@/modules/users/schemas/user.schema';
 
 @Injectable()
@@ -36,13 +43,18 @@ export class WishlistService {
   async addToWishlist(userId: string, auctionId: string) {
     this.ensureValidAuctionId(auctionId);
 
-    const auction = await this.auctionModel.findById(auctionId).select({ _id: 1 });
+    const auction = await this.auctionModel
+      .findById(auctionId)
+      .select({ _id: 1 });
 
     if (!auction) {
       throw new NotFoundException('Auction not found');
     }
 
-    const existingEntry = await this.wishlistModel.findOne({ userId, auctionId });
+    const existingEntry = await this.wishlistModel.findOne({
+      userId,
+      auctionId,
+    });
 
     if (existingEntry) {
       return {
@@ -60,7 +72,10 @@ export class WishlistService {
   async removeFromWishlist(userId: string, auctionId: string) {
     this.ensureValidAuctionId(auctionId);
 
-    const deleted = await this.wishlistModel.findOneAndDelete({ userId, auctionId });
+    const deleted = await this.wishlistModel.findOneAndDelete({
+      userId,
+      auctionId,
+    });
 
     if (!deleted) {
       throw new NotFoundException('Wishlist entry not found');
@@ -100,13 +115,18 @@ export class WishlistService {
       .find({ _id: { $in: auctionIds } })
       .lean();
 
-    const auctionById = new Map(auctions.map((auction) => [String(auction._id), auction]));
+    const auctionById = new Map(
+      auctions.map((auction) => [String(auction._id), auction]),
+    );
 
     const sellerIds = Array.from(
       new Set(
         auctions
           .map((auction) => auction.createdBy)
-          .filter((sellerId): sellerId is string => typeof sellerId === 'string' && sellerId.length > 0),
+          .filter(
+            (sellerId): sellerId is string =>
+              typeof sellerId === 'string' && sellerId.length > 0,
+          ),
       ),
     );
 
@@ -115,7 +135,9 @@ export class WishlistService {
       .select({ _id: 1, username: 1, email: 1 })
       .lean();
 
-    const sellerById = new Map(sellers.map((seller) => [String(seller._id), seller]));
+    const sellerById = new Map(
+      sellers.map((seller) => [String(seller._id), seller]),
+    );
 
     const wishlist = wishlistItems
       .map((item) => {

@@ -80,35 +80,37 @@ export class PaymentsService {
     }
 
     if (auction.winner) {
-      const winnerNotification = await this.notificationsService.createNotification({
-        userId: auction.winner,
-        type: 'PAYMENT_SUCCESS',
-        title: 'Payment successful',
-        message: `Payment confirmed for auction ${String(auction._id)}.`,
-        metadata: {
-          auctionId: String(auction._id),
-          providerPaymentId,
-        },
-        dedupeKey: `paymentSuccess:${String(auction._id)}:${auction.winner}`,
-      });
+      const winnerNotification =
+        await this.notificationsService.createNotification({
+          userId: auction.winner,
+          type: 'PAYMENT_SUCCESS',
+          title: 'Payment successful',
+          message: `Payment confirmed for auction ${String(auction._id)}.`,
+          metadata: {
+            auctionId: String(auction._id),
+            providerPaymentId,
+          },
+          dedupeKey: `paymentSuccess:${String(auction._id)}:${auction.winner}`,
+        });
 
       this.bidsGateway.server
         .to(`user:${auction.winner}`)
         .emit('notification:new', winnerNotification);
     }
 
-    const creatorNotification = await this.notificationsService.createNotification({
-      userId: auction.createdBy,
-      type: 'SYSTEM',
-      title: 'Winner payment received',
-      message: `Winner payment is confirmed for auction ${String(auction._id)}.`,
-      metadata: {
-        auctionId: String(auction._id),
-        winner: auction.winner,
-        providerPaymentId,
-      },
-      dedupeKey: `creatorPaymentReceived:${String(auction._id)}:${auction.createdBy}`,
-    });
+    const creatorNotification =
+      await this.notificationsService.createNotification({
+        userId: auction.createdBy,
+        type: 'SYSTEM',
+        title: 'Winner payment received',
+        message: `Winner payment is confirmed for auction ${String(auction._id)}.`,
+        metadata: {
+          auctionId: String(auction._id),
+          winner: auction.winner,
+          providerPaymentId,
+        },
+        dedupeKey: `creatorPaymentReceived:${String(auction._id)}:${auction.createdBy}`,
+      });
 
     this.bidsGateway.server
       .to(`user:${auction.createdBy}`)
@@ -125,7 +127,9 @@ export class PaymentsService {
   }
 
   validateWebhookSecret(secretFromHeader?: string) {
-    const configuredSecret = this.configService.get<string>('PAYMENT_WEBHOOK_SECRET');
+    const configuredSecret = this.configService.get<string>(
+      'PAYMENT_WEBHOOK_SECRET',
+    );
 
     if (!configuredSecret) {
       return;
@@ -144,10 +148,11 @@ export class PaymentsService {
       };
     }
 
-    const { auction } = await this.auctionsService.confirmWinnerPaymentByProvider(
-      payload.auctionId,
-      payload.winnerUserId,
-    );
+    const { auction } =
+      await this.auctionsService.confirmWinnerPaymentByProvider(
+        payload.auctionId,
+        payload.winnerUserId,
+      );
 
     await this.emitPaymentSuccessNotifications(
       payload.auctionId,
@@ -167,7 +172,9 @@ export class PaymentsService {
     }
 
     const clientId = this.configService.get<string>('CASHFREE_CLIENT_ID');
-    const clientSecret = this.configService.get<string>('CASHFREE_CLIENT_SECRET');
+    const clientSecret = this.configService.get<string>(
+      'CASHFREE_CLIENT_SECRET',
+    );
 
     if (!clientId || !clientSecret) {
       throw new InternalServerErrorException(
@@ -250,7 +257,9 @@ export class PaymentsService {
     payload: CashfreeCreateLinkDto,
   ) {
     const clientId = this.configService.get<string>('CASHFREE_CLIENT_ID');
-    const clientSecret = this.configService.get<string>('CASHFREE_CLIENT_SECRET');
+    const clientSecret = this.configService.get<string>(
+      'CASHFREE_CLIENT_SECRET',
+    );
 
     if (!clientId || !clientSecret) {
       throw new InternalServerErrorException(
@@ -265,7 +274,9 @@ export class PaymentsService {
     }
 
     if (auction.status !== 'ENDED') {
-      throw new BadRequestException('Auction must be ended before payment link creation');
+      throw new BadRequestException(
+        'Auction must be ended before payment link creation',
+      );
     }
 
     if (!auction.winner) {
@@ -282,7 +293,9 @@ export class PaymentsService {
     }
 
     if (auction.paymentStatus === 'PAID') {
-      throw new BadRequestException('Payment already completed for this auction');
+      throw new BadRequestException(
+        'Payment already completed for this auction',
+      );
     }
 
     const winnerUser = await this.usersService.findById(auction.winner);
@@ -296,15 +309,20 @@ export class PaymentsService {
     const baseUrl =
       this.configService.get<string>('CASHFREE_BASE_URL') ??
       'https://sandbox.cashfree.com';
-    const frontendBaseUrlRaw = this.configService.get<string>('FRONTEND_BASE_URL');
+    const frontendBaseUrlRaw =
+      this.configService.get<string>('FRONTEND_BASE_URL');
     const frontendBaseUrl = frontendBaseUrlRaw?.replace(/\/+$/, '');
-    const configuredReturnUrl = this.configService.get<string>('PAYMENT_RETURN_URL');
-    const configuredNotifyUrl = this.configService.get<string>('PAYMENT_NOTIFY_URL');
+    const configuredReturnUrl =
+      this.configService.get<string>('PAYMENT_RETURN_URL');
+    const configuredNotifyUrl =
+      this.configService.get<string>('PAYMENT_NOTIFY_URL');
 
     const linkId = `auction_${String(auction._id)}_${Date.now()}`;
 
     if (linkId.length > 50) {
-      throw new BadRequestException('Generated link_id exceeds Cashfree length limit');
+      throw new BadRequestException(
+        'Generated link_id exceeds Cashfree length limit',
+      );
     }
 
     const requestBody: CashfreeCreateLinkPayload = {
@@ -315,7 +333,8 @@ export class PaymentsService {
         payload.linkPurpose ??
         `Payment for auction ${String(auction._id)} (${auction.title})`,
       customer_details: {
-        customer_name: winnerUser.name ?? winnerUser.username ?? winnerUser.email,
+        customer_name:
+          winnerUser.name ?? winnerUser.username ?? winnerUser.email,
         customer_phone: payload.customerPhone,
         customer_email: winnerUser.email,
       },

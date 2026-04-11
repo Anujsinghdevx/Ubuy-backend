@@ -1,0 +1,54 @@
+{
+  "moduleFileExtensions": ["js", "json", "ts"],
+  "rootDir": "..",
+  "testEnvironment": "node",
+  "testRegex": "src/.*\\.spec\\.ts$",
+  "transform": {
+    "^.+\\.(t|j)s$": [
+      "ts-jest",
+      {
+        "tsconfig": "<rootDir>/tsconfig.test.json"
+      }
+    ]
+  },
+  "moduleNameMapper": {
+    "^@/(.*)$": "<rootDir>/src/$1"
+  },
+  "testPathIgnorePatterns": ["<rootDir>/test/smoke/", "<rootDir>/dist/"],
+  "collectCoverageFrom": [
+    "src/**/*.ts",
+    "!src/main.ts",
+    "!src/**/*.module.ts",
+    "!src/**/*.dto.ts",
+    "!src/**/*.schema.ts"
+  ],
+  "coveragePathIgnorePatterns": ["<rootDir>/test/", "<rootDir>/dist/"],
+  "coverageThreshold": {
+    "./src/modules/auth/auth.service.ts": {
+      "branches": 8,
+      "functions": 25,
+      "lines": 25,
+      "statements": 25
+    },
+    "./src/modules/auctions/auctions.service.ts": {
+      "branches": 4,
+      "functions": 10,
+      "lines": 15,
+      "statements": 15
+    },
+    "./src/modules/notifications/notifications.service.ts": {
+      "branches": 50,
+      "functions": 50,
+      "lines": 65,
+      "statements": 65
+    },
+    "./src/modules/payments/payments.service.ts": {
+      "branches": 40,
+      "functions": 45,
+      "lines": 45,
+      "statements": 45
+    }
+  },
+  "clearMocks": true,
+  "restoreMocks": true
+}

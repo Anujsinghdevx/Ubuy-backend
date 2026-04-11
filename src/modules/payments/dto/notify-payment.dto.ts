@@ -2,7 +2,10 @@ import { ApiProperty } from '@nestjs/swagger';
 import { IsOptional, IsString, Matches } from 'class-validator';
 
 export class NotifyPaymentDto {
-  @ApiProperty({ example: '507f1f77bcf86cd799439011', description: 'Auction ID' })
+  @ApiProperty({
+    example: '507f1f77bcf86cd799439011',
+    description: 'Auction ID',
+  })
   @IsString()
   auctionId!: string;
 

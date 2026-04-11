@@ -109,7 +109,9 @@ export class BidsGateway
     }
 
     try {
-      const payload = this.jwtService.verify<{ sub: string; email: string }>(token);
+      const payload = this.jwtService.verify<{ sub: string; email: string }>(
+        token,
+      );
       client.data.user = {
         userId: payload.sub,
         email: payload.email,
@@ -127,7 +129,7 @@ export class BidsGateway
     @ConnectedSocket() client: AuthenticatedSocket,
   ) {
     const auctionId =
-      typeof payload === 'string' ? payload : payload?.auctionId ?? '';
+      typeof payload === 'string' ? payload : (payload?.auctionId ?? '');
 
     if (!auctionId) {
       throw new WsException('auctionId is required');
@@ -150,7 +152,7 @@ export class BidsGateway
     @ConnectedSocket() client: AuthenticatedSocket,
   ) {
     const auctionId =
-      typeof payload === 'string' ? payload : payload?.auctionId ?? '';
+      typeof payload === 'string' ? payload : (payload?.auctionId ?? '');
 
     if (!auctionId) {
       throw new WsException('auctionId is required');
@@ -175,7 +177,11 @@ export class BidsGateway
     let auctionIdForLogs =
       typeof data?.auctionId === 'string' ? data.auctionId : undefined;
 
-    const sendAckOnce = (response: { ok: boolean; data?: unknown; error?: string }) => {
+    const sendAckOnce = (response: {
+      ok: boolean;
+      data?: unknown;
+      error?: string;
+    }) => {
       if (!ackProvided || !ack) {
         this.logger.warn(
           JSON.stringify({
@@ -218,7 +224,9 @@ export class BidsGateway
         ack(response);
       } catch (error) {
         ackCallbackError =
-          error instanceof Error ? error.message : 'ack callback threw non-error value';
+          error instanceof Error
+            ? error.message
+            : 'ack callback threw non-error value';
       }
 
       this.logger.log(
@@ -249,7 +257,8 @@ export class BidsGateway
       userIdForLogs = user.userId;
 
       stage = 'validation';
-      const auctionId = typeof data?.auctionId === 'string' ? data.auctionId : '';
+      const auctionId =
+        typeof data?.auctionId === 'string' ? data.auctionId : '';
       auctionIdForLogs = auctionId;
 
       const normalizedAmount =

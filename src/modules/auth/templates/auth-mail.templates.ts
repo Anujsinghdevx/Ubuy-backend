@@ -22,7 +22,9 @@ export function buildVerificationEmailTemplate(code: string): AuthMailTemplate {
   };
 }
 
-export function buildPasswordResetEmailTemplate(code: string): AuthMailTemplate {
+export function buildPasswordResetEmailTemplate(
+  code: string,
+): AuthMailTemplate {
   return {
     subject: 'U-Buy Password Reset Code',
     html: `

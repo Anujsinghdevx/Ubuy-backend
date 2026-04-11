@@ -11,7 +11,12 @@ export class ResendCodeDto {
   @IsEmail()
   email!: string;
 
-  @ApiProperty({ example: 'email-verification', description: 'Purpose for resending code', enum: ResendCodePurpose, required: false })
+  @ApiProperty({
+    example: 'email-verification',
+    description: 'Purpose for resending code',
+    enum: ResendCodePurpose,
+    required: false,
+  })
   @IsOptional()
   @IsEnum(ResendCodePurpose)
   purpose?: ResendCodePurpose;

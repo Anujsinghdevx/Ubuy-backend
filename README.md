@@ -120,6 +120,12 @@ npm install
 npm run start:dev
 ```
 
+## Testing
+
+For the complete testing strategy, commands, standards, CI recommendations, and troubleshooting, see:
+
+- [TESTING.md](TESTING.md)
+
 ## Smoke Testing
 
 - Fast core smoke suite (recommended for PR checks):

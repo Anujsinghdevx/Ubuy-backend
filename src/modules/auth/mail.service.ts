@@ -1,4 +1,8 @@
-import { Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  InternalServerErrorException,
+  Logger,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import nodemailer, { type Transporter } from 'nodemailer';
 import {
@@ -22,7 +26,8 @@ export class MailService {
       this.configService.get<string>('SMTP_HOST') ?? 'smtp.gmail.com';
     const smtpPort = Number(this.configService.get<string>('SMTP_PORT') ?? 587);
     const smtpSecure =
-      String(this.configService.get<string>('SMTP_SECURE') ?? 'false') === 'true';
+      String(this.configService.get<string>('SMTP_SECURE') ?? 'false') ===
+      'true';
     const smtpEmail = this.configService.get<string>('SMTP_EMAIL');
     const smtpPassword = this.configService.get<string>('SMTP_PASSWORD');
 
@@ -47,7 +52,8 @@ export class MailService {
 
   private getFromAddress() {
     const smtpEmail = this.configService.get<string>('SMTP_EMAIL');
-    const fromName = this.configService.get<string>('SMTP_FROM_NAME') ?? 'U-Buy Support';
+    const fromName =
+      this.configService.get<string>('SMTP_FROM_NAME') ?? 'U-Buy Support';
 
     if (!smtpEmail) {
       throw new InternalServerErrorException('SMTP_EMAIL is not configured');
@@ -75,7 +81,9 @@ export class MailService {
       this.logger.error(
         `Failed to send verification email to ${email}: ${error instanceof Error ? error.message : 'Unknown error'}`,
       );
-      throw new InternalServerErrorException('Unable to send verification email');
+      throw new InternalServerErrorException(
+        'Unable to send verification email',
+      );
     }
   }
 
@@ -98,7 +106,9 @@ export class MailService {
       this.logger.error(
         `Failed to send password reset email to ${email}: ${error instanceof Error ? error.message : 'Unknown error'}`,
       );
-      throw new InternalServerErrorException('Unable to send password reset email');
+      throw new InternalServerErrorException(
+        'Unable to send password reset email',
+      );
     }
   }
 }

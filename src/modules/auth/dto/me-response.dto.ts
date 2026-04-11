@@ -13,10 +13,17 @@ export class MeUserDto {
   @ApiPropertyOptional({ example: 'John Doe', description: 'Display name' })
   name?: string;
 
-  @ApiPropertyOptional({ example: 'https://cloudinary.com/.../profile.jpg', description: 'Profile image URL' })
+  @ApiPropertyOptional({
+    example: 'https://cloudinary.com/.../profile.jpg',
+    description: 'Profile image URL',
+  })
   image?: string;
 
-  @ApiProperty({ example: 'local', description: 'Auth provider', enum: ['local', 'google'] })
+  @ApiProperty({
+    example: 'local',
+    description: 'Auth provider',
+    enum: ['local', 'google'],
+  })
   provider!: 'local' | 'google';
 
   @ApiProperty({ example: true, description: 'Whether email is verified' })
@@ -31,7 +38,10 @@ export class MeUserDto {
 }
 
 export class MeResponseDto {
-  @ApiProperty({ example: 'User fetched successfully', description: 'Status message' })
+  @ApiProperty({
+    example: 'User fetched successfully',
+    description: 'Status message',
+  })
   message!: string;
 
   @ApiProperty({ type: MeUserDto, description: 'Authenticated user profile' })

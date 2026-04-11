@@ -9,7 +9,10 @@ import * as bcrypt from 'bcrypt';
 import { getQueueToken } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import { AppModule } from '../../src/app.module';
-import { User, UserDocument } from '../../src/modules/users/schemas/user.schema';
+import {
+  User,
+  UserDocument,
+} from '../../src/modules/users/schemas/user.schema';
 import { AuctionProcessor } from '../../src/modules/auctions/auction.processor';
 
 describe('Smoke Test Suite', () => {
@@ -59,7 +62,9 @@ describe('Smoke Test Suite', () => {
       await auctionQueue.close();
     }
 
-    const worker = (auctionProcessor as unknown as { worker?: { close: () => Promise<void> } }).worker;
+    const worker = (
+      auctionProcessor as unknown as { worker?: { close: () => Promise<void> } }
+    ).worker;
 
     if (worker) {
       await worker.close();
@@ -112,7 +117,9 @@ describe('Smoke Test Suite', () => {
   });
 
   it('protected notifications endpoint rejects anonymous requests', async () => {
-    const response = await request(app.getHttpServer()).get('/v1/notifications');
+    const response = await request(app.getHttpServer()).get(
+      '/v1/notifications',
+    );
 
     expect(response.status).toBe(401);
   });

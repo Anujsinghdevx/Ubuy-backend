@@ -2,7 +2,10 @@ import { IsString, IsNumber, Min } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class PlaceBidDto {
-  @ApiProperty({ example: '507f1f77bcf86cd799439011', description: 'Auction ID' })
+  @ApiProperty({
+    example: '507f1f77bcf86cd799439011',
+    description: 'Auction ID',
+  })
   @IsString()
   auctionId!: string;
 
