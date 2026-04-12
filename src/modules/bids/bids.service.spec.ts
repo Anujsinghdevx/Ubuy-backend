@@ -112,7 +112,9 @@ describe('BidsService', () => {
         }),
       }),
     });
-    auctionModel.findOneAndUpdate.mockResolvedValue({ _id: '507f1f77bcf86cd799439011' } as never);
+    auctionModel.findOneAndUpdate.mockResolvedValue({
+      _id: '507f1f77bcf86cd799439011',
+    } as never);
     bidModel.create.mockResolvedValue({ _id: 'bid-1' } as never);
     userModel.updateOne.mockResolvedValue({ modifiedCount: 1 } as never);
 
@@ -133,6 +135,11 @@ describe('BidsService', () => {
       { $addToSet: { biddedAuctions: '507f1f77bcf86cd799439011' } },
     );
     expect(to).toHaveBeenCalledWith('507f1f77bcf86cd799439011');
+    expect(emit).toHaveBeenCalledWith('newBid', {
+      auctionId: '507f1f77bcf86cd799439011',
+      amount: 100,
+      userId: 'user-3',
+    });
     expect(result).toEqual({ _id: '507f1f77bcf86cd799439011' });
   });
 
@@ -152,10 +159,14 @@ describe('BidsService', () => {
         }),
       }),
     });
-    auctionModel.findOneAndUpdate.mockResolvedValue({ _id: '507f1f77bcf86cd799439011' } as never);
+    auctionModel.findOneAndUpdate.mockResolvedValue({
+      _id: '507f1f77bcf86cd799439011',
+    } as never);
     bidModel.create.mockResolvedValue({ _id: 'bid-1' } as never);
     userModel.updateOne.mockResolvedValue({ modifiedCount: 1 } as never);
-    notificationsService.createNotification.mockResolvedValue({ _id: 'notif-1' } as never);
+    notificationsService.createNotification.mockResolvedValue({
+      _id: 'notif-1',
+    } as never);
 
     await service.placeBid('user-3', '507f1f77bcf86cd799439011', 100);
 

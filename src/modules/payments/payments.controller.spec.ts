@@ -46,14 +46,18 @@ describe('PaymentsController', () => {
       ),
     ).resolves.toEqual({ accepted: true });
 
-    expect(paymentsService.validateWebhookSecret).toHaveBeenCalledWith('secret');
+    expect(paymentsService.validateWebhookSecret).toHaveBeenCalledWith(
+      'secret',
+    );
     expect(paymentsService.handleWebhook).toHaveBeenCalledWith(
       expect.objectContaining({ auctionId: '507f1f77bcf86cd799439011' }),
     );
   });
 
   it('should proxy payment verification lookup', async () => {
-    paymentsService.verifyCashfreePaymentLink.mockResolvedValue({ status: 'PAID' });
+    paymentsService.verifyCashfreePaymentLink.mockResolvedValue({
+      status: 'PAID',
+    });
 
     await expect(
       controller.verifyCashfreePayment({ linkId: 'auction_123' } as never),

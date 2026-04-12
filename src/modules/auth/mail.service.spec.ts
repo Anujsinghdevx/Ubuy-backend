@@ -64,7 +64,9 @@ describe('MailService', () => {
     sendMail.mockResolvedValue({ messageId: 'msg-1' });
     const service = new MailService(configService);
 
-    await expect(service.sendVerificationEmail('user@ubuy.dev', '123456')).resolves.toBeUndefined();
+    await expect(
+      service.sendVerificationEmail('user@ubuy.dev', '123456'),
+    ).resolves.toBeUndefined();
 
     expect(createTransport).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -89,7 +91,9 @@ describe('MailService', () => {
     sendMail.mockResolvedValue({ messageId: 'msg-2' });
     const service = new MailService(configService);
 
-    await expect(service.sendPasswordResetEmail('user@ubuy.dev', '999999')).resolves.toBeUndefined();
+    await expect(
+      service.sendPasswordResetEmail('user@ubuy.dev', '999999'),
+    ).resolves.toBeUndefined();
 
     expect(buildPasswordResetEmailTemplate).toHaveBeenCalledWith('999999');
     expect(sendMail).toHaveBeenCalledWith(
@@ -104,8 +108,8 @@ describe('MailService', () => {
     sendMail.mockRejectedValue(new Error('smtp failure'));
     const service = new MailService(configService);
 
-    await expect(service.sendVerificationEmail('user@ubuy.dev', '123456')).rejects.toBeInstanceOf(
-      InternalServerErrorException,
-    );
+    await expect(
+      service.sendVerificationEmail('user@ubuy.dev', '123456'),
+    ).rejects.toBeInstanceOf(InternalServerErrorException);
   });
 });

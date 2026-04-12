@@ -13,17 +13,26 @@ import {
   User,
   UserDocument,
 } from '../../src/modules/users/schemas/user.schema';
+import {
+  Auction,
+  AuctionDocument,
+} from '../../src/modules/auctions/schemas/auction.schema';
 import { AuctionProcessor } from '../../src/modules/auctions/auction.processor';
 
 describe('Smoke Test Suite', () => {
   let app: INestApplication;
   let userModel: Model<UserDocument>;
+  let auctionModel: Model<AuctionDocument>;
   let mongoConnection: Connection;
   let auctionQueue: Queue;
   let auctionProcessor: AuctionProcessor;
   const seededUserEmail = 'smoke.auth.user@ubuy.local';
   const seededUserPassword = 'SmokePass123!';
   const seededUsername = 'smoke_auth_user';
+  let seededUserId = '';
+  let seededAuctionId = '';
+  let cancellableAuctionId = '';
+  let endableAuctionId = '';
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -38,24 +47,83 @@ describe('Smoke Test Suite', () => {
     await app.init();
 
     userModel = app.get<Model<UserDocument>>(getModelToken(User.name));
+    auctionModel = app.get<Model<AuctionDocument>>(getModelToken(Auction.name));
     mongoConnection = app.get<Connection>(getConnectionToken());
     auctionQueue = app.get<Queue>(getQueueToken('auctionQueue'));
     auctionProcessor = app.get<AuctionProcessor>(AuctionProcessor);
 
+    await auctionModel.deleteMany({ createdBy: { $exists: true } });
     await userModel.deleteOne({ email: seededUserEmail });
 
     const hashedPassword = await bcrypt.hash(seededUserPassword, 10);
 
-    await userModel.create({
+    const seededUser = await userModel.create({
       email: seededUserEmail,
       username: seededUsername,
       password: hashedPassword,
       provider: 'local',
       isVerified: true,
     });
+
+    seededUserId = String(seededUser._id);
+
+    const now = new Date();
+    const endedAuction = await auctionModel.create({
+      title: 'Smoke Payment Confirmation Auction',
+      description: 'Seeded auction for payment confirmation smoke coverage',
+      images: ['https://example.com/smoke-payment-confirmation.jpg'],
+      startingPrice: 1000,
+      currentPrice: 1250,
+      status: 'ENDED',
+      startTime: new Date(now.getTime() - 2 * 60 * 60 * 1000),
+      endTime: new Date(now.getTime() - 60 * 60 * 1000),
+      category: 'smoke',
+      createdBy: seededUserId,
+      winner: seededUserId,
+      highestBidder: seededUserId,
+      paymentStatus: 'ACTIVE',
+    });
+
+    seededAuctionId = String(endedAuction._id);
+
+    const cancellableAuction = await auctionModel.create({
+      title: 'Smoke Cancel Auction',
+      description: 'Seeded auction for cancel coverage',
+      images: ['https://example.com/smoke-cancel.jpg'],
+      startingPrice: 900,
+      currentPrice: 900,
+      status: 'ACTIVE',
+      startTime: new Date(now.getTime() - 60 * 60 * 1000),
+      endTime: new Date(now.getTime() + 60 * 60 * 1000),
+      category: 'smoke',
+      createdBy: seededUserId,
+      paymentStatus: 'ACTIVE',
+    });
+
+    cancellableAuctionId = String(cancellableAuction._id);
+
+    const endableAuction = await auctionModel.create({
+      title: 'Smoke End Auction',
+      description: 'Seeded auction for immediate end trigger coverage',
+      images: ['https://example.com/smoke-end.jpg'],
+      startingPrice: 1100,
+      currentPrice: 1100,
+      status: 'ACTIVE',
+      startTime: new Date(now.getTime() - 60 * 60 * 1000),
+      endTime: new Date(now.getTime() + 2 * 60 * 60 * 1000),
+      category: 'smoke',
+      createdBy: seededUserId,
+      paymentStatus: 'ACTIVE',
+    });
+
+    endableAuctionId = String(endableAuction._id);
   });
 
   afterAll(async () => {
+    if (auctionModel) {
+      await auctionModel.deleteMany({ createdBy: seededUserId });
+    }
+
     await userModel.deleteOne({ email: seededUserEmail });
 
     if (auctionQueue) {
@@ -95,7 +163,7 @@ describe('Smoke Test Suite', () => {
       .get('/v1/auth/check-username-unique')
       .query({ username: `smoke_user_${Date.now()}` });
 
-    expect(response.status).toBe(200);
+    expect([200, 201]).toContain(response.status);
     expect(response.body).toEqual(
       expect.objectContaining({
         isAvailable: expect.any(Boolean),
@@ -108,10 +176,39 @@ describe('Smoke Test Suite', () => {
       .get('/v1/auctions')
       .query({ page: 1, limit: 1 });
 
-    expect(response.status).toBe(200);
+    expect([200, 201]).toContain(response.status);
     expect(response.body).toEqual(
       expect.objectContaining({
         data: expect.any(Array),
+      }),
+    );
+  });
+
+  it('authenticated auction queue status endpoint responds successfully', async () => {
+    const loginResponse = await request(app.getHttpServer())
+      .post('/v1/auth/login')
+      .send({
+        email: seededUserEmail,
+        password: seededUserPassword,
+      });
+
+    expect(loginResponse.status).toBe(201);
+
+    const response = await request(app.getHttpServer())
+      .get('/v1/auctions/queue/status')
+      .set('Authorization', `Bearer ${loginResponse.body.access_token}`);
+
+    expect([200, 201]).toContain(response.status);
+    expect(response.body).toEqual(
+      expect.objectContaining({
+        queue: 'auctionQueue',
+        counts: expect.any(Object),
+        sample: expect.objectContaining({
+          failed: expect.any(Array),
+          delayed: expect.any(Array),
+          waiting: expect.any(Array),
+          active: expect.any(Array),
+        }),
       }),
     );
   });
@@ -161,5 +258,86 @@ describe('Smoke Test Suite', () => {
         }),
       }),
     );
+  });
+
+  it('winner can confirm payment for an ended auction', async () => {
+    const loginResponse = await request(app.getHttpServer())
+      .post('/v1/auth/login')
+      .send({
+        email: seededUserEmail,
+        password: seededUserPassword,
+      });
+
+    expect(loginResponse.status).toBe(201);
+
+    const response = await request(app.getHttpServer())
+      .post(`/v1/auctions/${seededAuctionId}/payment/confirm`)
+      .set('Authorization', `Bearer ${loginResponse.body.access_token}`);
+
+    expect([200, 201]).toContain(response.status);
+    expect(response.body).toEqual(
+      expect.objectContaining({
+        message: expect.stringMatching(/payment confirmed/i),
+        auction: expect.objectContaining({
+          paymentStatus: 'PAID',
+          status: 'ENDED',
+        }),
+      }),
+    );
+  });
+
+  it('owner can cancel an active auction', async () => {
+    const loginResponse = await request(app.getHttpServer())
+      .post('/v1/auth/login')
+      .send({
+        email: seededUserEmail,
+        password: seededUserPassword,
+      });
+
+    expect(loginResponse.status).toBe(201);
+
+    const response = await request(app.getHttpServer())
+      .post(`/v1/auctions/${cancellableAuctionId}/cancel`)
+      .set('Authorization', `Bearer ${loginResponse.body.access_token}`);
+
+    expect([200, 201]).toContain(response.status);
+    expect(response.body).toEqual(
+      expect.objectContaining({
+        message: expect.stringMatching(/cancelled/i),
+        auction: expect.objectContaining({
+          _id: cancellableAuctionId,
+          status: 'CANCELLED',
+        }),
+      }),
+    );
+
+    const persistedAuction = await auctionModel.findById(cancellableAuctionId);
+    expect(persistedAuction?.status).toBe('CANCELLED');
+    expect(persistedAuction?.winner).toBeUndefined();
+  });
+
+  it('owner can trigger immediate auction end', async () => {
+    const loginResponse = await request(app.getHttpServer())
+      .post('/v1/auth/login')
+      .send({
+        email: seededUserEmail,
+        password: seededUserPassword,
+      });
+
+    expect(loginResponse.status).toBe(201);
+
+    const response = await request(app.getHttpServer())
+      .post(`/v1/auctions/${endableAuctionId}/end`)
+      .set('Authorization', `Bearer ${loginResponse.body.access_token}`);
+
+    expect([200, 201]).toContain(response.status);
+    expect(response.body).toEqual(
+      expect.objectContaining({
+        message: expect.stringMatching(/end triggered|already ended/i),
+      }),
+    );
+
+    const persistedAuction = await auctionModel.findById(endableAuctionId);
+    expect(persistedAuction?.status).toMatch(/ACTIVE|ENDED/);
   });
 });

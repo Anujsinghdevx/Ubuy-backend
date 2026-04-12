@@ -14,12 +14,13 @@ This document defines the testing strategy, standards, and workflows for the Ubu
 We use a layered approach:
 
 - Unit tests: Validate isolated business logic (services, guards, helpers).
+- Integration tests: Validate cross-module behavior with real persistence and targeted infrastructure mocks.
 - Smoke tests: Validate critical API flows and integration wiring.
 - Optional extended smoke: Validate secondary authenticated flows.
 
 Recommended execution order:
 
-1. Run lint + unit tests on every pull request.
+1. Run lint + unit + integration tests on every pull request.
 2. Run core smoke tests on pull requests where API/runtime behavior changes.
 3. Run full smoke suite nightly or before high-risk releases.
 
@@ -33,6 +34,7 @@ Recommended execution order:
 Key configuration files:
 
 - Root scripts: package.json
+- Integration Jest config: test/jest-integration.json
 - Smoke Jest config: test/jest-smoke.json
 - Test TypeScript config: tsconfig.test.json
 
@@ -90,7 +92,27 @@ npm run test:cov
 npm run test:debug
 ```
 
-### 4.3 Smoke Tests
+### 4.3 Integration Tests
+
+- Run all integration tests:
+
+```bash
+npm run test:integration
+```
+
+- Included in local quality gate:
+
+```bash
+npm run check:local
+```
+
+Integration suites currently cover:
+
+- test/integration/auth-auctions.integration-spec.ts
+- test/integration/bids.integration-spec.ts
+- test/integration/payments.integration-spec.ts
+
+### 4.4 Smoke Tests
 
 - Core smoke suite (fast PR-friendly checks):
 
@@ -121,6 +143,10 @@ npm run test:smoke:nightly
 
 ### 5.1 Existing Structure
 
+- Integration tests:
+  - test/integration/auth-auctions.integration-spec.ts
+  - test/integration/bids.integration-spec.ts
+  - test/integration/payments.integration-spec.ts
 - Smoke tests:
   - test/smoke/api.smoke-spec.ts
   - test/smoke/user-flows.smoke-spec.ts
@@ -203,11 +229,15 @@ For BullMQ queues:
 
 ## 8. Environment Requirements
 
-Smoke tests depend on application runtime integrations. Ensure required environment variables are available:
+Integration and smoke tests depend on application runtime integrations. Ensure required environment variables are available:
 
 - MONGO_URI
-- REDIS_URL
 - JWT_SECRET
+
+Notes:
+
+- Integration suites override queue/worker and selected gateway/redis providers where needed to stay deterministic.
+- Smoke suites can still require REDIS_URL (or REDIS_HOST/REDIS_PORT) depending on flow.
 
 Optional variables can affect specific flows (payment redirects, notifications, etc.).
 
@@ -232,6 +262,7 @@ Suggested pull request pipeline:
 2. npm run build
 3. npm run prettier:check
 4. npm run test:unit
+5. npm run test:integration
 
 Note: `prettier:check` is currently scoped to workflow files to keep CI stable while the repository transitions to full Prettier compliance.
 
@@ -239,7 +270,8 @@ Suggested nightly pipeline:
 
 1. npm ci
 2. npm run test:unit:cov
-3. npm run test:smoke
+3. npm run test:integration
+4. npm run test:smoke
 
 ## 11. Flakiness Prevention Checklist
 

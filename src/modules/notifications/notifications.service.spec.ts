@@ -178,7 +178,9 @@ describe('NotificationsService', () => {
   });
 
   it('should delete all notifications for a user', async () => {
-    notificationModel.deleteMany.mockResolvedValue({ deletedCount: 4 } as never);
+    notificationModel.deleteMany.mockResolvedValue({
+      deletedCount: 4,
+    } as never);
 
     await expect(service.deleteAllNotifications('u4')).resolves.toEqual({
       deletedCount: 4,
@@ -186,7 +188,9 @@ describe('NotificationsService', () => {
   });
 
   it('should delete read notifications for a user', async () => {
-    notificationModel.deleteMany.mockResolvedValue({ deletedCount: 2 } as never);
+    notificationModel.deleteMany.mockResolvedValue({
+      deletedCount: 2,
+    } as never);
 
     await expect(service.deleteReadNotifications('u5')).resolves.toEqual({
       deletedCount: 2,
@@ -194,7 +198,9 @@ describe('NotificationsService', () => {
   });
 
   it('should delete a single notification by id', async () => {
-    notificationModel.findOneAndDelete.mockResolvedValue({ _id: 'n6' } as never);
+    notificationModel.findOneAndDelete.mockResolvedValue({
+      _id: 'n6',
+    } as never);
 
     await expect(service.deleteNotification('u6', 'n6')).resolves.toEqual({
       deleted: true,

@@ -28,12 +28,12 @@ describe('JwtStrategy', () => {
 
     const strategy = new JwtStrategy(configService, usersService);
 
-    await expect(strategy.validate({ sub: 'user-1', email: 'user@ubuy.dev' })).resolves.toEqual(
-      {
-        userId: 'user-1',
-        email: 'user@ubuy.dev',
-      },
-    );
+    await expect(
+      strategy.validate({ sub: 'user-1', email: 'user@ubuy.dev' }),
+    ).resolves.toEqual({
+      userId: 'user-1',
+      email: 'user@ubuy.dev',
+    });
   });
 
   it('should throw UnauthorizedException when user is missing or unverified', async () => {
@@ -50,8 +50,8 @@ describe('JwtStrategy', () => {
 
     const strategy = new JwtStrategy(configService, usersService);
 
-    await expect(strategy.validate({ sub: 'user-1', email: 'user@ubuy.dev' })).rejects.toBeInstanceOf(
-      UnauthorizedException,
-    );
+    await expect(
+      strategy.validate({ sub: 'user-1', email: 'user@ubuy.dev' }),
+    ).rejects.toBeInstanceOf(UnauthorizedException);
   });
 });

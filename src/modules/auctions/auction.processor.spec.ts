@@ -59,7 +59,9 @@ describe('AuctionProcessor', () => {
     auctionsService.scheduleWinnerPaymentLifecycle.mockResolvedValue({
       paymentDueAt: new Date('2026-04-12T00:00:00.000Z'),
     });
-    notificationsService.createNotification.mockResolvedValue({ _id: 'notif-1' });
+    notificationsService.createNotification.mockResolvedValue({
+      _id: 'notif-1',
+    });
 
     await processor.process({
       id: 'job-1',
@@ -69,7 +71,9 @@ describe('AuctionProcessor', () => {
 
     expect(auctionsService.endAuction).toHaveBeenCalledWith('auction-1');
     expect(notificationsService.createNotification).toHaveBeenCalled();
-    expect(auctionsService.markAuctionNotified).toHaveBeenCalledWith('auction-1');
+    expect(auctionsService.markAuctionNotified).toHaveBeenCalledWith(
+      'auction-1',
+    );
   });
 
   it('should process payment reminder jobs', async () => {
@@ -79,7 +83,9 @@ describe('AuctionProcessor', () => {
       winner: 'winner-1',
       paymentDueAt: new Date('2026-04-12T00:00:00.000Z'),
     });
-    notificationsService.createNotification.mockResolvedValue({ _id: 'notif-2' });
+    notificationsService.createNotification.mockResolvedValue({
+      _id: 'notif-2',
+    });
 
     await processor.process({
       id: 'job-2',
@@ -98,7 +104,9 @@ describe('AuctionProcessor', () => {
       winner: 'winner-1',
       createdBy: 'creator-1',
     });
-    notificationsService.createNotification.mockResolvedValue({ _id: 'notif-3' });
+    notificationsService.createNotification.mockResolvedValue({
+      _id: 'notif-3',
+    });
 
     await processor.process({
       id: 'job-3',

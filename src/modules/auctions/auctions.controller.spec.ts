@@ -57,11 +57,10 @@ describe('AuctionsController', () => {
     bidsService.placeBid.mockRejectedValue(new Error('Bid too low'));
 
     await expect(
-      controller.placeAuctionBid(
-        'auction-1',
-        { amount: 100 } as never,
-        { userId: 'user-1', email: 'user@ubuy.dev' },
-      ),
+      controller.placeAuctionBid('auction-1', { amount: 100 } as never, {
+        userId: 'user-1',
+        email: 'user@ubuy.dev',
+      }),
     ).rejects.toBeInstanceOf(BadRequestException);
   });
 
@@ -76,7 +75,9 @@ describe('AuctionsController', () => {
   it('should proxy top bidders lookup with parsed limit', async () => {
     auctionsService.getTopBiddersForAuction.mockResolvedValue({ total: 1 });
 
-    await expect(controller.getTopBiddersByAuction('auction-1', '5')).resolves.toEqual({
+    await expect(
+      controller.getTopBiddersByAuction('auction-1', '5'),
+    ).resolves.toEqual({
       total: 1,
     });
     expect(auctionsService.getTopBiddersForAuction).toHaveBeenCalledWith(

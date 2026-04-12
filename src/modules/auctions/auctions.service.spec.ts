@@ -283,9 +283,9 @@ describe('AuctionsService', () => {
       paymentStatus: 'ACTIVE',
     } as never);
 
-    await expect(service.cancelAuction('auction-8', 'other-user')).rejects.toBeInstanceOf(
-      BadRequestException,
-    );
+    await expect(
+      service.cancelAuction('auction-8', 'other-user'),
+    ).rejects.toBeInstanceOf(BadRequestException);
   });
 
   it('should return already cancelled response for cancelAuction', async () => {

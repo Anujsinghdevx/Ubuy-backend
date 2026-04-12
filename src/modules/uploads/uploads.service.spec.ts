@@ -55,7 +55,9 @@ describe('UploadsService', () => {
     const uploadStream = new PassThrough();
     (cloudinary.uploader.upload_stream as jest.Mock).mockImplementation(
       (_options, callback) => {
-        process.nextTick(() => callback(null, { secure_url: 'https://cdn.test/a.jpg' }));
+        process.nextTick(() =>
+          callback(null, { secure_url: 'https://cdn.test/a.jpg' }),
+        );
         return uploadStream;
       },
     );

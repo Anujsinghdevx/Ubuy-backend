@@ -38,12 +38,17 @@ describe('BidsGateway', () => {
   });
 
   it('should join auction and user rooms when auth token is present', async () => {
-    jwtServiceMock.verify.mockReturnValue({ sub: 'user-1', email: 'user@ubuy.dev' });
+    jwtServiceMock.verify.mockReturnValue({
+      sub: 'user-1',
+      email: 'user@ubuy.dev',
+    });
     const client = buildClient({
       handshake: { auth: { token: 'token' } },
     });
 
-    await expect(gateway.handleJoinAuction({ auctionId: 'auction-1' }, client as never)).resolves.toEqual({
+    await expect(
+      gateway.handleJoinAuction({ auctionId: 'auction-1' }, client as never),
+    ).resolves.toEqual({
       message: 'Joined auction auction-1',
     });
     expect(client.join).toHaveBeenCalledWith('user:user-1');
@@ -53,14 +58,19 @@ describe('BidsGateway', () => {
   it('should leave auction room', async () => {
     const client = buildClient();
 
-    await expect(gateway.handleLeaveAuction('auction-1', client as never)).resolves.toEqual({
+    await expect(
+      gateway.handleLeaveAuction('auction-1', client as never),
+    ).resolves.toEqual({
       message: 'Left auction auction-1',
     });
     expect(client.leave).toHaveBeenCalledWith('auction-1');
   });
 
   it('should place bid and invoke ack callback on success', async () => {
-    jwtServiceMock.verify.mockReturnValue({ sub: 'user-1', email: 'user@ubuy.dev' });
+    jwtServiceMock.verify.mockReturnValue({
+      sub: 'user-1',
+      email: 'user@ubuy.dev',
+    });
     bidsService.placeBid.mockResolvedValue({ _id: 'auction-1' });
     const client = buildClient({
       handshake: { auth: { token: 'token' } },
@@ -68,9 +78,17 @@ describe('BidsGateway', () => {
     const ack = jest.fn();
 
     await expect(
-      gateway.handlePlaceBid(client as never, { auctionId: 'auction-1', amount: '100' }, ack),
+      gateway.handlePlaceBid(
+        client as never,
+        { auctionId: 'auction-1', amount: '100' },
+        ack,
+      ),
     ).resolves.toBeUndefined();
-    expect(bidsService.placeBid).toHaveBeenCalledWith('user-1', 'auction-1', 100);
+    expect(bidsService.placeBid).toHaveBeenCalledWith(
+      'user-1',
+      'auction-1',
+      100,
+    );
     expect(ack).toHaveBeenCalledWith({ ok: true, data: { _id: 'auction-1' } });
   });
 
@@ -78,7 +96,11 @@ describe('BidsGateway', () => {
     const client = buildClient();
 
     await expect(
-      gateway.handlePlaceBid(client as never, { auctionId: 'auction-1', amount: 100 }, undefined),
+      gateway.handlePlaceBid(
+        client as never,
+        { auctionId: 'auction-1', amount: 100 },
+        undefined,
+      ),
     ).rejects.toBeInstanceOf(WsException);
   });
 });

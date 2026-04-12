@@ -24,7 +24,9 @@ describe('WishlistController', () => {
 
   it('should reject addToWishlist when user is missing', async () => {
     await expect(
-      controller.addToWishlist(undefined, { auctionId: '507f1f77bcf86cd799439011' } as never),
+      controller.addToWishlist(undefined, {
+        auctionId: '507f1f77bcf86cd799439011',
+      } as never),
     ).rejects.toBeInstanceOf(UnauthorizedException);
   });
 

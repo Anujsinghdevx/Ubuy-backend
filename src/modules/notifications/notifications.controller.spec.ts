@@ -20,7 +20,9 @@ describe('NotificationsController', () => {
 
     const module: TestingModule = await Test.createTestingModule({
       controllers: [NotificationsController],
-      providers: [{ provide: NotificationsService, useValue: notificationsService }],
+      providers: [
+        { provide: NotificationsService, useValue: notificationsService },
+      ],
     }).compile();
 
     controller = module.get<NotificationsController>(NotificationsController);
@@ -50,7 +52,13 @@ describe('NotificationsController', () => {
   it('should ignore invalid notification type filter', async () => {
     notificationsService.listNotifications.mockResolvedValue({ items: [] });
 
-    await controller.list({ userId: 'user-1', email: 'user@ubuy.dev' }, undefined, undefined, undefined, 'bad-type');
+    await controller.list(
+      { userId: 'user-1', email: 'user@ubuy.dev' },
+      undefined,
+      undefined,
+      undefined,
+      'bad-type',
+    );
 
     expect(notificationsService.listNotifications).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -66,10 +74,15 @@ describe('NotificationsController', () => {
   });
 
   it('should proxy delete all notifications for authenticated user', async () => {
-    notificationsService.deleteAllNotifications.mockResolvedValue({ deletedCount: 3 });
+    notificationsService.deleteAllNotifications.mockResolvedValue({
+      deletedCount: 3,
+    });
 
     await expect(
-      controller.deleteAllNotifications({ userId: 'user-1', email: 'user@ubuy.dev' }),
+      controller.deleteAllNotifications({
+        userId: 'user-1',
+        email: 'user@ubuy.dev',
+      }),
     ).resolves.toEqual({ deletedCount: 3 });
   });
 });
