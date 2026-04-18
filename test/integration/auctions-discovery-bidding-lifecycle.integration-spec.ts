@@ -490,7 +490,7 @@ describe('Integration: auctions discovery, bidding lifecycle, and payment flow',
           $push: { winnerHistory: historyEntry },
           $set: { winner: bidder1Id, currentPrice: 7000 },
         },
-        { returnDocument: 'after', new: true },
+        { returnDocument: 'after' },
       );
 
       expect(updated?.winnerHistory?.length).toBeGreaterThan(0);

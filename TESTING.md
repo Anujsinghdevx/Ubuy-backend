@@ -54,12 +54,6 @@ npm run check:local
 npm run test:unit
 ```
 
-- Watch unit tests while developing:
-
-```bash
-npm run test:unit:watch
-```
-
 - Unit coverage (enforces baseline thresholds):
 
 ```bash
@@ -72,24 +66,6 @@ npm run test:unit:cov
 
 ```bash
 npm test
-```
-
-- Watch mode:
-
-```bash
-npm run test:watch
-```
-
-- Coverage mode:
-
-```bash
-npm run test:cov
-```
-
-- Debug mode:
-
-```bash
-npm run test:debug
 ```
 
 ### 4.3 Integration Tests
@@ -108,23 +84,21 @@ npm run check:local
 
 Integration suites currently cover:
 
+- test/integration/auctions-discovery-bidding-lifecycle.integration-spec.ts
+- test/integration/auctions-payment-expiry.integration-spec.ts
+- test/integration/auctions-permissions.integration-spec.ts
 - test/integration/auth-auctions.integration-spec.ts
+- test/integration/auth-lifecycle.integration-spec.ts
+- test/integration/auth-profile-authorization.integration-spec.ts
+- test/integration/bids-websocket.integration-spec.ts
 - test/integration/bids.integration-spec.ts
+- test/integration/notifications-delete.integration-spec.ts
+- test/integration/notifications.integration-spec.ts
 - test/integration/payments.integration-spec.ts
+- test/integration/uploads.integration-spec.ts
+- test/integration/wishlist.integration-spec.ts
 
 ### 4.4 Smoke Tests
-
-- Core smoke suite (fast PR-friendly checks):
-
-```bash
-npm run test:smoke:core
-```
-
-- Extended smoke suite (authenticated user flows):
-
-```bash
-npm run test:smoke:extended
-```
 
 - Full smoke suite:
 
@@ -132,21 +106,51 @@ npm run test:smoke:extended
 npm run test:smoke
 ```
 
-- CI/nightly aliases:
+### 4.5 E2E Tests
+
+- Core e2e suite (highest-value user journeys first):
 
 ```bash
-npm run test:smoke:ci
-npm run test:smoke:nightly
+npm run test:e2e:core
 ```
+
+- Run all e2e tests:
+
+```bash
+npm run test:e2e
+```
+
+Use `npm run test:e2e:core` for fastest high-value validation and `npm run test:e2e` for full e2e coverage.
+
+E2E suites should validate real HTTP user journeys with full Nest module wiring and minimal mocking.
+
+Core e2e coverage currently includes:
+
+- test/e2e/auth-signup-verification.e2e-spec.ts
+- test/e2e/auth-profile.e2e-spec.ts
+- test/e2e/auction-bid-payment.e2e-spec.ts
+- test/e2e/auctions-permissions.e2e-spec.ts
+- test/e2e/bids-websocket.e2e-spec.ts
+- test/e2e/auction-payment-expiry-decision.e2e-spec.ts
 
 ## 5. Test Organization
 
 ### 5.1 Existing Structure
 
 - Integration tests:
+  - test/integration/auctions-discovery-bidding-lifecycle.integration-spec.ts
+  - test/integration/auctions-payment-expiry.integration-spec.ts
+  - test/integration/auctions-permissions.integration-spec.ts
   - test/integration/auth-auctions.integration-spec.ts
+  - test/integration/auth-lifecycle.integration-spec.ts
+  - test/integration/auth-profile-authorization.integration-spec.ts
+  - test/integration/bids-websocket.integration-spec.ts
   - test/integration/bids.integration-spec.ts
+  - test/integration/notifications-delete.integration-spec.ts
+  - test/integration/notifications.integration-spec.ts
   - test/integration/payments.integration-spec.ts
+  - test/integration/uploads.integration-spec.ts
+  - test/integration/wishlist.integration-spec.ts
 - Smoke tests:
   - test/smoke/api.smoke-spec.ts
   - test/smoke/user-flows.smoke-spec.ts
@@ -229,10 +233,11 @@ For BullMQ queues:
 
 ## 8. Environment Requirements
 
-Integration and smoke tests depend on application runtime integrations. Ensure required environment variables are available:
+Integration, smoke, and e2e tests depend on application runtime integrations. Ensure required environment variables are available:
 
 - MONGO_URI
 - JWT_SECRET
+- REDIS_URL (or REDIS_HOST and REDIS_PORT)
 
 Notes:
 

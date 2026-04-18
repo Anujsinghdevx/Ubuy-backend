@@ -128,29 +128,10 @@ For the complete testing strategy, commands, standards, CI recommendations, and 
 
 ## Smoke Testing
 
-- Fast core smoke suite (recommended for PR checks):
-
-```bash
-npm run test:smoke:core
-```
-
-- Extended smoke suite (authenticated notification and payment flows):
-
-```bash
-npm run test:smoke:extended
-```
-
 - Full smoke suite:
 
 ```bash
 npm run test:smoke
-```
-
-- CI aliases:
-
-```bash
-npm run test:smoke:ci
-npm run test:smoke:nightly
 ```
 
 - GitHub Actions options:
