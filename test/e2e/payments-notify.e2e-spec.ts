@@ -171,7 +171,10 @@ describe('E2E: payment notify journey', () => {
   it('rejects notify-payment without authentication', async () => {
     const response = await request(app.getHttpServer())
       .post('/v1/payments/notify-payment')
-      .send({ auctionId: '507f1f77bcf86cd799439011', customerPhone: '9876543210' });
+      .send({
+        auctionId: '507f1f77bcf86cd799439011',
+        customerPhone: '9876543210',
+      });
 
     expect([401, 403]).toContain(response.status);
   });

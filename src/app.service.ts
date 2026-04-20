@@ -12,6 +12,7 @@ export class AppService {
 
     const links = {
       health: `${baseUrl}/health`,
+      metrics: `${baseUrl}/metrics`,
       versionedApiBase: `${baseUrl}${versionPrefix}`,
       ...(showAdminLinks
         ? {
@@ -45,6 +46,7 @@ export class AppService {
     const systemEndpoints = [
       { method: 'GET', path: '/', auth: 'public' },
       { method: 'GET', path: '/api-info', auth: 'public' },
+      { method: 'GET', path: '/metrics', auth: 'public' },
     ];
 
     if (showAdminLinks) {

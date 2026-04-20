@@ -210,7 +210,8 @@ describe('E2E: bidding concurrency lock behavior', () => {
     expect(statuses.filter((code) => code === 201)).toHaveLength(1);
     expect(statuses.filter((code) => code === 400)).toHaveLength(1);
 
-    const failureResponse = bid1Response.status === 400 ? bid1Response : bid2Response;
+    const failureResponse =
+      bid1Response.status === 400 ? bid1Response : bid2Response;
     expect(failureResponse.body).toEqual(
       expect.objectContaining({
         message: 'Another bid is being processed, try again',

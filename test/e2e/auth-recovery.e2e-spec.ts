@@ -103,7 +103,9 @@ describe('E2E: auth recovery lifecycle', () => {
       }),
     );
 
-    const userWithResetCode = await userModel.findOne({ email: userEmail }).lean();
+    const userWithResetCode = await userModel
+      .findOne({ email: userEmail })
+      .lean();
     expect(userWithResetCode?.passwordResetCode).toEqual(expect.any(String));
 
     const verifyCodeResponse = await request(app.getHttpServer())

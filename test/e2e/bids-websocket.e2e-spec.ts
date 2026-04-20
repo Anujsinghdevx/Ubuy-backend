@@ -17,7 +17,10 @@ import {
   AuctionDocument,
 } from '../../src/modules/auctions/schemas/auction.schema';
 import { Bid, BidDocument } from '../../src/modules/bids/schemas/bid.schema';
-import { Notification, NotificationDocument } from '../../src/modules/notifications/schemas/notification.schema';
+import {
+  Notification,
+  NotificationDocument,
+} from '../../src/modules/notifications/schemas/notification.schema';
 import { AuctionProcessor } from '../../src/modules/auctions/auction.processor';
 import { RedisService } from '../../src/common/redis/redis.service';
 
@@ -220,7 +223,10 @@ describe('E2E: bids websocket live broadcast', () => {
   it('accepts socket bid and broadcasts newBid to other room subscribers', async () => {
     const creatorToken = await loginAndGetToken(creatorEmail, creatorPassword);
     const bidderToken = await loginAndGetToken(bidderEmail, bidderPassword);
-    const observerToken = await loginAndGetToken(observerEmail, observerPassword);
+    const observerToken = await loginAndGetToken(
+      observerEmail,
+      observerPassword,
+    );
 
     const createAuctionResponse = await request(app.getHttpServer())
       .post('/v1/auctions')

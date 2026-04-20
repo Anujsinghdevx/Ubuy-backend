@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
 import { HealthService } from './health.service';
 import { RedisService } from '@/common/redis/redis.service';
+import { ObservabilityMetricsService } from '@/common/observability/observability-metrics.service';
 
 describe('HealthService', () => {
   let service: HealthService;
@@ -12,6 +13,12 @@ describe('HealthService', () => {
 
   const redisService = {
     ping: jest.fn(),
+  };
+
+  const observabilityMetricsService = {
+    recordMongoSnapshot: jest.fn(),
+  } as unknown as ObservabilityMetricsService & {
+    recordMongoSnapshot: jest.Mock;
   };
 
   const mongoConnection = {
@@ -43,6 +50,10 @@ describe('HealthService', () => {
         { provide: 'DatabaseConnection', useValue: mongoConnection },
         { provide: RedisService, useValue: redisService },
         { provide: ConfigService, useValue: configService },
+        {
+          provide: ObservabilityMetricsService,
+          useValue: observabilityMetricsService,
+        },
       ],
     })
       .overrideProvider('DatabaseConnection')
@@ -59,5 +70,6 @@ describe('HealthService', () => {
     expect(result.checks.mongo.status).toBe('up');
     expect(result.checks.redis.status).toBe('up');
     expect(result.checks.config.status).toBe('up');
+    expect(observabilityMetricsService.recordMongoSnapshot).toHaveBeenCalled();
   });
 });

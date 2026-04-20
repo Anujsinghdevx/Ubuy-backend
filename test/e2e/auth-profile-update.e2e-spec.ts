@@ -174,7 +174,9 @@ describe('E2E: auth profile update journey', () => {
     expect(publicProfileResponse.body).toEqual(
       expect.objectContaining({
         id: user1Id,
-        username: expect.stringMatching(/User One Updated|e2e_profile_user1_updated/i),
+        username: expect.stringMatching(
+          /User One Updated|e2e_profile_user1_updated/i,
+        ),
       }),
     );
 

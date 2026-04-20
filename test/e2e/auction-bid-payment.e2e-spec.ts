@@ -1,14 +1,7 @@
 import { INestApplication, VersioningType } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import request from 'supertest';
-import {
-  afterAll,
-  beforeAll,
-  describe,
-  expect,
-  it,
-  jest,
-} from '@jest/globals';
+import { afterAll, beforeAll, describe, expect, it, jest } from '@jest/globals';
 import { getConnectionToken, getModelToken } from '@nestjs/mongoose';
 import { getQueueToken } from '@nestjs/bullmq';
 import { Connection, Model } from 'mongoose';
@@ -148,9 +141,7 @@ describe('E2E: auction bidding and payment journey', () => {
     }
   });
 
-  it(
-    'allows bidder to win an ended auction and confirm payment',
-    async () => {
+  it('allows bidder to win an ended auction and confirm payment', async () => {
     const creatorToken = await loginAndGetToken(creatorEmail, creatorPassword);
     const bidderToken = await loginAndGetToken(bidderEmail, bidderPassword);
 
@@ -200,35 +191,33 @@ describe('E2E: auction bidding and payment journey', () => {
       }),
     );
 
-      await auctionModel.updateOne(
-        { _id: auctionId },
-        {
-          $set: {
-            status: 'ENDED',
-            winner: bidderUserId,
-            highestBidder: bidderUserId,
-            paymentStatus: 'ACTIVE',
-            endTime: new Date(Date.now() - 1000),
-          },
+    await auctionModel.updateOne(
+      { _id: auctionId },
+      {
+        $set: {
+          status: 'ENDED',
+          winner: bidderUserId,
+          highestBidder: bidderUserId,
+          paymentStatus: 'ACTIVE',
+          endTime: new Date(Date.now() - 1000),
         },
-      );
+      },
+    );
 
-      const confirmPaymentResponse = await request(app.getHttpServer())
-        .post(`/v1/auctions/${auctionId}/payment/confirm`)
-        .set('Authorization', `Bearer ${bidderToken}`);
+    const confirmPaymentResponse = await request(app.getHttpServer())
+      .post(`/v1/auctions/${auctionId}/payment/confirm`)
+      .set('Authorization', `Bearer ${bidderToken}`);
 
-      expect([200, 201]).toContain(confirmPaymentResponse.status);
-      expect(confirmPaymentResponse.body).toEqual(
-        expect.objectContaining({
-          message: expect.stringMatching(/payment confirmed/i),
-          auction: expect.objectContaining({
-            _id: auctionId,
-            status: 'ENDED',
-            paymentStatus: 'PAID',
-          }),
+    expect([200, 201]).toContain(confirmPaymentResponse.status);
+    expect(confirmPaymentResponse.body).toEqual(
+      expect.objectContaining({
+        message: expect.stringMatching(/payment confirmed/i),
+        auction: expect.objectContaining({
+          _id: auctionId,
+          status: 'ENDED',
+          paymentStatus: 'PAID',
         }),
-      );
-    },
-    20000,
-  );
+      }),
+    );
+  }, 20000);
 });

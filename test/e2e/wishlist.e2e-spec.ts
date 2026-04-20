@@ -142,7 +142,10 @@ describe('E2E: wishlist journey', () => {
   });
 
   it('supports add -> list -> remove wishlist flow for authenticated user', async () => {
-    const token = await loginAndGetToken(wishlistUserEmail, wishlistUserPassword);
+    const token = await loginAndGetToken(
+      wishlistUserEmail,
+      wishlistUserPassword,
+    );
 
     const auction = await auctionModel.create({
       title: `E2E Wishlist Auction ${Date.now()}`,

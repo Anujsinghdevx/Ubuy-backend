@@ -12,11 +12,13 @@ import { AuthModule } from '@/modules/auth/auth.module';
 import { WsJwtGuard } from '@/common/guards/ws-jwt.guard';
 import { NotificationsModule } from '@/modules/notifications/notifications.module';
 import { User, UserSchema } from '@/modules/users/schemas/user.schema';
+import { ObservabilityModule } from '@/common/observability/observability.module';
 
 @Module({
   imports: [
     forwardRef(() => AuthModule),
     NotificationsModule,
+    ObservabilityModule,
     MongooseModule.forFeature([
       { name: Bid.name, schema: BidSchema },
       { name: Auction.name, schema: AuctionSchema },

@@ -142,7 +142,9 @@ describe('E2E: auctions permissions and ownership', () => {
     }
 
     if (userModel) {
-      await userModel.deleteMany({ email: { $in: [ownerEmail, intruderEmail] } });
+      await userModel.deleteMany({
+        email: { $in: [ownerEmail, intruderEmail] },
+      });
     }
 
     if (app) {
@@ -156,7 +158,10 @@ describe('E2E: auctions permissions and ownership', () => {
 
   it('rejects non-owner cancel, end-now, and delete operations', async () => {
     const ownerToken = await loginAndGetToken(ownerEmail, ownerPassword);
-    const intruderToken = await loginAndGetToken(intruderEmail, intruderPassword);
+    const intruderToken = await loginAndGetToken(
+      intruderEmail,
+      intruderPassword,
+    );
 
     const auctionId = await createOwnerAuction(
       ownerToken,

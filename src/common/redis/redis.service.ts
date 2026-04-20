@@ -2,14 +2,21 @@ import { Injectable, Logger, OnApplicationShutdown } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import Redis from 'ioredis';
 import { getRedisOptions } from './redis.config';
+import { ObservabilityMetricsService } from '@/common/observability/observability-metrics.service';
 
 @Injectable()
 export class RedisService implements OnApplicationShutdown {
   private readonly logger = new Logger(RedisService.name);
   private client: Redis;
 
-  constructor(private readonly configService: ConfigService) {
+  constructor(
+    private readonly configService: ConfigService,
+    private readonly observabilityMetricsService: ObservabilityMetricsService,
+  ) {
     this.client = this.createClient();
+    this.observabilityMetricsService.recordRedisSnapshot({
+      status: this.client.status,
+    });
   }
 
   private createClient() {
@@ -30,10 +37,16 @@ export class RedisService implements OnApplicationShutdown {
   private async ensureConnected() {
     if (this.client.status === 'end' || this.client.status === 'close') {
       this.client = this.createClient();
+      this.observabilityMetricsService.recordRedisSnapshot({
+        status: this.client.status,
+      });
     }
 
     if (this.client.status === 'wait') {
       await this.client.connect();
+      this.observabilityMetricsService.recordRedisSnapshot({
+        status: this.client.status,
+      });
     }
 
     return this.client;
@@ -42,6 +55,11 @@ export class RedisService implements OnApplicationShutdown {
   async ping() {
     const client = await this.ensureConnected();
     const response = await client.ping();
+
+    this.observabilityMetricsService.recordRedisSnapshot({
+      status: client.status,
+      pingResponse: response,
+    });
 
     return {
       response,

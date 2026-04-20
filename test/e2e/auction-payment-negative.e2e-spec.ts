@@ -187,7 +187,10 @@ describe('E2E: auction payment negative paths', () => {
   });
 
   it('rejects payment confirmation by non-winner', async () => {
-    const outsiderToken = await loginAndGetToken(outsiderEmail, outsiderPassword);
+    const outsiderToken = await loginAndGetToken(
+      outsiderEmail,
+      outsiderPassword,
+    );
     const auctionId = await createAuctionRecord({
       status: 'ENDED',
       winner: winnerUserId,

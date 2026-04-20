@@ -1,14 +1,7 @@
 import { INestApplication, VersioningType } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import request from 'supertest';
-import {
-  afterAll,
-  beforeAll,
-  describe,
-  expect,
-  it,
-  jest,
-} from '@jest/globals';
+import { afterAll, beforeAll, describe, expect, it, jest } from '@jest/globals';
 import { getConnectionToken, getModelToken } from '@nestjs/mongoose';
 import { getQueueToken } from '@nestjs/bullmq';
 import { Connection, Model } from 'mongoose';

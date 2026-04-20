@@ -19,6 +19,7 @@ describe('AppService', () => {
     const result = service.getRootStatus();
 
     expect(result.links.docs).toContain('/docs');
+    expect(result.links.metrics).toContain('/metrics');
     expect(result.links.queueDashboard).toContain('/admin/queues');
   });
 
@@ -31,6 +32,7 @@ describe('AppService', () => {
     const result = service.getRootStatus();
 
     expect(result.links.docs).toBeUndefined();
+    expect(result.links.metrics).toContain('/metrics');
     expect(result.links.versionedApiBase).toContain('6001');
   });
 
@@ -43,5 +45,10 @@ describe('AppService', () => {
 
     expect(result.endpoints.auth).toEqual(expect.any(Array));
     expect(result.endpoints.system).toEqual(expect.any(Array));
+    expect(result.endpoints.system).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ method: 'GET', path: '/metrics' }),
+      ]),
+    );
   });
 });

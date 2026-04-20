@@ -5,6 +5,7 @@ import { AuctionsService } from './auctions.service';
 import { BidsGateway } from '@/modules/bids/bids.gateway';
 import { NotificationsService } from '@/modules/notifications/notifications.service';
 import { ConfigService } from '@nestjs/config';
+import { ObservabilityMetricsService } from '@/common/observability/observability-metrics.service';
 
 type EndAuctionJobData = {
   auctionId: string;
@@ -21,12 +22,16 @@ type AuctionQueueJobData = EndAuctionJobData | PaymentLifecycleJobData;
 @Injectable()
 export class AuctionProcessor extends WorkerHost {
   private readonly logger = new Logger(AuctionProcessor.name);
+  private readonly slowJobThresholdMs = Number(
+    process.env.SLOW_QUEUE_JOB_TRACE_MS ?? 250,
+  );
 
   constructor(
     private readonly auctionsService: AuctionsService,
     private readonly bidsGateway: BidsGateway,
     private readonly notificationsService: NotificationsService,
     private readonly configService: ConfigService,
+    private readonly observabilityMetricsService: ObservabilityMetricsService,
   ) {
     super();
   }
@@ -323,28 +328,95 @@ export class AuctionProcessor extends WorkerHost {
 
   @OnWorkerEvent('active')
   onActive(job: Job<AuctionQueueJobData>) {
-    this.logger.log(`Auction job ${String(job.id)} is active`);
+    this.observabilityMetricsService.recordQueueJob({
+      queue: 'auctionQueue',
+      jobName: job.name,
+      event: 'active',
+    });
+    this.logger.log(
+      JSON.stringify({
+        event: 'queue_job_started',
+        queue: 'auctionQueue',
+        jobId: String(job.id),
+        jobName: job.name,
+        attemptsMade: job.attemptsMade,
+      }),
+    );
   }
 
   @OnWorkerEvent('completed')
   onCompleted(job: Job<AuctionQueueJobData>) {
-    this.logger.log(`Auction job ${String(job.id)} completed successfully`);
+    this.observabilityMetricsService.recordQueueJob({
+      queue: 'auctionQueue',
+      jobName: job.name,
+      event: 'completed',
+    });
+    const durationMs = this.getJobDurationMs(job);
+    const tracePayload = {
+      event: 'queue_job_completed',
+      queue: 'auctionQueue',
+      jobId: String(job.id),
+      jobName: job.name,
+      attemptsMade: job.attemptsMade,
+      durationMs,
+      thresholdMs: this.slowJobThresholdMs,
+    };
+
+    if (durationMs >= this.slowJobThresholdMs) {
+      this.logger.warn(JSON.stringify(tracePayload));
+      return;
+    }
+
+    this.logger.log(JSON.stringify(tracePayload));
   }
 
   @OnWorkerEvent('error')
   onError(error: Error) {
+    this.observabilityMetricsService.recordQueueJob({
+      queue: 'auctionQueue',
+      jobName: 'worker',
+      event: 'error',
+    });
     this.logger.error(`Auction worker error: ${error.message}`);
   }
 
   @OnWorkerEvent('failed')
   onFailed(job: Job<AuctionQueueJobData> | undefined, error: Error) {
+    this.observabilityMetricsService.recordQueueJob({
+      queue: 'auctionQueue',
+      jobName: job?.name ?? 'unknown',
+      event: 'failed',
+    });
     if (!job) {
       this.logger.error(`Auction job failed: ${error.message}`);
       return;
     }
 
+    const durationMs = this.getJobDurationMs(job);
+    const tracePayload = {
+      event: 'queue_job_failed',
+      queue: 'auctionQueue',
+      jobId: String(job.id),
+      jobName: job.name,
+      attemptsMade: job.attemptsMade,
+      durationMs,
+      thresholdMs: this.slowJobThresholdMs,
+      error: error.message,
+    };
+
+    if (durationMs >= this.slowJobThresholdMs) {
+      this.logger.warn(JSON.stringify(tracePayload));
+    }
+
     this.logger.warn(
       `Auction job ${job.id} failed on attempt ${job.attemptsMade} of ${job.opts.attempts ?? 1}: ${error.message}`,
     );
+  }
+
+  private getJobDurationMs(job: Job<AuctionQueueJobData>) {
+    const startedOn = job.processedOn ?? job.timestamp ?? Date.now();
+    const finishedOn = job.finishedOn ?? Date.now();
+
+    return Math.max(0, finishedOn - startedOn);
   }
 }

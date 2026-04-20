@@ -10,6 +10,8 @@ import { getQueueToken } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import rateLimit from 'express-rate-limit';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { HttpObservabilityMiddleware } from '@/common/middleware/http-observability.middleware';
+import { ObservabilityMetricsService } from '@/common/observability/observability-metrics.service';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -34,6 +36,12 @@ async function bootstrap() {
   });
 
   expressApp.set('trust proxy', 1);
+
+  const observabilityMetricsService = app.get(ObservabilityMetricsService);
+  const httpObservabilityMiddleware = new HttpObservabilityMiddleware(
+    observabilityMetricsService,
+  );
+  app.use(httpObservabilityMiddleware.use.bind(httpObservabilityMiddleware));
 
   const uploadRateLimiter = rateLimit({
     windowMs: 1 * 60 * 1000,

@@ -8,10 +8,7 @@ const originalWarn = console.warn;
 beforeAll(() => {
   jest.spyOn(console, 'warn').mockImplementation((...args: unknown[]) => {
     const [first] = args;
-    if (
-      typeof first === 'string' &&
-      first.includes(BULLMQ_EVICTION_WARNING)
-    ) {
+    if (typeof first === 'string' && first.includes(BULLMQ_EVICTION_WARNING)) {
       return;
     }
 

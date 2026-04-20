@@ -14,6 +14,7 @@ import { NotificationsModule } from '@/modules/notifications/notifications.modul
 import { PaymentsModule } from '@/modules/payments/payments.module';
 import { UploadsModule } from '@/modules/uploads/uploads.module';
 import { WishlistModule } from '@/modules/wishlist/wishlist.module';
+import { ObservabilityModule } from '@/common/observability/observability.module';
 
 @Module({
   imports: [
@@ -37,6 +38,7 @@ import { WishlistModule } from '@/modules/wishlist/wishlist.module';
     PaymentsModule,
     UploadsModule,
     WishlistModule,
+    ObservabilityModule,
     HealthModule,
   ],
   controllers: [AppController],

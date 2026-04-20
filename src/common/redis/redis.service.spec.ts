@@ -2,6 +2,7 @@ import { ConfigService } from '@nestjs/config';
 import Redis from 'ioredis';
 import { RedisService } from './redis.service';
 import { getRedisOptions } from './redis.config';
+import { ObservabilityMetricsService } from '@/common/observability/observability-metrics.service';
 
 jest.mock('ioredis', () => jest.fn());
 jest.mock('./redis.config', () => ({
@@ -14,6 +15,11 @@ describe('RedisService', () => {
   let redisClient: any;
 
   const configService = {} as ConfigService;
+  const observabilityMetricsService = {
+    recordRedisSnapshot: jest.fn(),
+  } as unknown as ObservabilityMetricsService & {
+    recordRedisSnapshot: jest.Mock;
+  };
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -32,18 +38,25 @@ describe('RedisService', () => {
   });
 
   it('should connect lazily and return ping result', async () => {
-    const service = new RedisService(configService);
+    const service = new RedisService(
+      configService,
+      observabilityMetricsService,
+    );
 
     await expect(service.ping()).resolves.toEqual({
       response: 'PONG',
       status: 'ready',
     });
     expect(redisClient.connect).toHaveBeenCalled();
+    expect(observabilityMetricsService.recordRedisSnapshot).toHaveBeenCalled();
   });
 
   it('should quit ready redis client on shutdown', async () => {
     redisClient.status = 'ready';
-    const service = new RedisService(configService);
+    const service = new RedisService(
+      configService,
+      observabilityMetricsService,
+    );
 
     await service.onApplicationShutdown();
     expect(redisClient.quit).toHaveBeenCalled();

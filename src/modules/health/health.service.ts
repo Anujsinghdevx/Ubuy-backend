@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { InjectConnection } from '@nestjs/mongoose';
 import { RedisService } from '@/common/redis/redis.service';
 import { Connection } from 'mongoose';
+import { ObservabilityMetricsService } from '@/common/observability/observability-metrics.service';
 
 type HealthState = 'up' | 'down';
 
@@ -18,6 +19,7 @@ export class HealthService {
     @InjectConnection() private readonly mongoConnection: Connection,
     private readonly redisService: RedisService,
     private readonly configService: ConfigService,
+    private readonly observabilityMetricsService: ObservabilityMetricsService,
   ) {}
 
   async getHealth() {
@@ -77,6 +79,12 @@ export class HealthService {
 
       const pingResponse = await this.mongoConnection.db.admin().ping();
 
+      this.observabilityMetricsService.recordMongoSnapshot({
+        readyState: this.mongoConnection.readyState,
+        dbName: this.mongoConnection.name,
+        pingOk: pingResponse.ok,
+      });
+
       return {
         status: pingResponse.ok === 1 ? 'up' : 'down',
         details: {
@@ -86,6 +94,12 @@ export class HealthService {
         },
       };
     } catch (error) {
+      this.observabilityMetricsService.recordMongoSnapshot({
+        readyState: this.mongoConnection.readyState,
+        dbName: this.mongoConnection.name,
+        pingOk: 0,
+      });
+
       return {
         status: 'down',
         error: error instanceof Error ? error.message : 'Unknown Mongo error',
