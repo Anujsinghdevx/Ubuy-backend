@@ -125,6 +125,8 @@ npm run start:dev
 For the complete testing strategy, commands, standards, CI recommendations, and troubleshooting, see:
 
 - [TESTING.md](TESTING.md)
+- [PRODUCTION_READINESS.md](PRODUCTION_READINESS.md)
+- [SECURITY_RUNBOOK.md](SECURITY_RUNBOOK.md)
 
 ## Coverage Reports
 
@@ -177,11 +179,17 @@ For local development and Render deployment, set at least:
 - `MONGO_URI`
 - `REDIS_URL` for Render Redis or another hosted Redis instance
 - `JWT_SECRET`
+- `PAYMENT_WEBHOOK_SECRET` for validating incoming payment webhooks
 - `PORT` is provided by Render in production, but can default locally
 - `ENABLE_ADMIN_TOOLS=true` only when you want Swagger and the BullMQ dashboard exposed in production
 - `FRONTEND_BASE_URL` optional, used to auto-build payment return URL fallback
 - `PAYMENT_RETURN_URL` optional, explicit fallback redirect URL after payment
 - `PAYMENT_NOTIFY_URL` optional, explicit fallback webhook notify URL sent to payment provider
+
+For secret rotation freshness automation in CI, set repository variables:
+
+- `JWT_SECRET_ROTATED_AT` in `YYYY-MM-DD` format
+- `PAYMENT_WEBHOOK_SECRET_ROTATED_AT` in `YYYY-MM-DD` format
 
 ---
 

@@ -13,6 +13,7 @@ import {
   Wishlist,
   WishlistSchema,
 } from '@/modules/wishlist/schemas/wishlist.schema';
+import { ObservabilityModule } from '@/common/observability/observability.module';
 
 @Module({
   imports: [
@@ -36,6 +37,7 @@ import {
     }),
     BidsModule,
     NotificationsModule,
+    ObservabilityModule,
   ],
   controllers: [AuctionsController],
   providers: [AuctionsService, AuctionProcessor],

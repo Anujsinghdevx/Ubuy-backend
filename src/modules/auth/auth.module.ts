@@ -12,6 +12,7 @@ import {
   AuctionSchema,
 } from '@/modules/auctions/schemas/auction.schema';
 import { Bid, BidSchema } from '@/modules/bids/schemas/bid.schema';
+import { SecurityModule } from '@/common/security/security.module';
 
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { Bid, BidSchema } from '@/modules/bids/schemas/bid.schema';
       },
     }),
     forwardRef(() => UsersModule),
+    SecurityModule,
     MongooseModule.forFeature([
       { name: Auction.name, schema: AuctionSchema },
       { name: Bid.name, schema: BidSchema },

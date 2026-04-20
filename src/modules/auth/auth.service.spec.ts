@@ -13,6 +13,7 @@ import { UsersService } from '@/modules/users/users.service';
 import { MailService } from './mail.service';
 import { Auction } from '@/modules/auctions/schemas/auction.schema';
 import { Bid } from '@/modules/bids/schemas/bid.schema';
+import { SecurityAuditService } from '@/common/security/security-audit.service';
 
 jest.mock('bcrypt', () => ({
   hash: jest.fn(),
@@ -39,6 +40,7 @@ describe('AuthService', () => {
   let mailService: Mocked<
     Pick<MailService, 'sendVerificationEmail' | 'sendPasswordResetEmail'>
   >;
+  let securityAuditService: Mocked<Pick<SecurityAuditService, 'logEvent'>>;
 
   beforeEach(async () => {
     jwtService = {
@@ -58,6 +60,10 @@ describe('AuthService', () => {
       sendPasswordResetEmail: jest.fn(),
     };
 
+    securityAuditService = {
+      logEvent: jest.fn(),
+    };
+
     const auctionModelMock: Partial<Model<Auction>> = {
       countDocuments: jest.fn(),
       updateMany: jest.fn(),
@@ -74,6 +80,7 @@ describe('AuthService', () => {
         { provide: UsersService, useValue: usersService },
         { provide: ConfigService, useValue: { get: jest.fn() } },
         { provide: MailService, useValue: mailService },
+        { provide: SecurityAuditService, useValue: securityAuditService },
         { provide: getModelToken(Auction.name), useValue: auctionModelMock },
         { provide: getModelToken(Bid.name), useValue: bidModelMock },
       ],
@@ -127,6 +134,13 @@ describe('AuthService', () => {
     expect(mailService.sendVerificationEmail).toHaveBeenCalledWith(
       'new@ubuy.dev',
       '123456',
+    );
+    expect(securityAuditService.logEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        domain: 'auth',
+        action: 'signup',
+        outcome: 'success',
+      }),
     );
   });
 
@@ -201,5 +215,86 @@ describe('AuthService', () => {
       sub: 'u4',
       email: 'login@ubuy.dev',
     });
+    expect(securityAuditService.logEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        domain: 'auth',
+        action: 'login',
+        outcome: 'success',
+      }),
+    );
+  });
+
+  it('should lock the account after repeated failed login attempts', async () => {
+    const save = jest.fn().mockResolvedValue(undefined as never);
+    const user = {
+      _id: 'u5',
+      email: 'lock@ubuy.dev',
+      password: 'hashed-password',
+      isVerified: true,
+      failedLoginAttempts: 4,
+      lockedUntil: undefined,
+      save,
+    };
+
+    usersService.findByEmail.mockResolvedValue(user as never);
+    mockedBcrypt.compare.mockResolvedValue(false as never);
+
+    await expect(
+      service.login('lock@ubuy.dev', 'WrongPass1!'),
+    ).rejects.toBeInstanceOf(BadRequestException);
+
+    expect(user.failedLoginAttempts).toBe(0);
+    expect(user.lockedUntil).toBeInstanceOf(Date);
+    expect(save).toHaveBeenCalledTimes(1);
+    expect(securityAuditService.logEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        domain: 'auth',
+        action: 'login',
+        outcome: 'blocked',
+        reason: 'too_many_failed_attempts',
+      }),
+    );
+  });
+
+  it('should block login while account is temporarily locked', async () => {
+    usersService.findByEmail.mockResolvedValue({
+      _id: 'u6',
+      email: 'blocked@ubuy.dev',
+      password: 'hashed-password',
+      isVerified: true,
+      lockedUntil: new Date(Date.now() + 60_000),
+      save: jest.fn(),
+    } as never);
+
+    await expect(
+      service.login('blocked@ubuy.dev', 'Pass123!'),
+    ).rejects.toBeInstanceOf(BadRequestException);
+
+    expect(mockedBcrypt.compare).not.toHaveBeenCalled();
+    expect(securityAuditService.logEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        domain: 'auth',
+        action: 'login',
+        outcome: 'blocked',
+        reason: 'account_temporarily_locked',
+      }),
+    );
+  });
+
+  it('should audit failed login attempts', async () => {
+    usersService.findByEmail.mockResolvedValue(null as never);
+
+    await expect(
+      service.login('missing@ubuy.dev', 'Pass123!'),
+    ).rejects.toBeInstanceOf(BadRequestException);
+
+    expect(securityAuditService.logEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        domain: 'auth',
+        action: 'login',
+        outcome: 'failure',
+        reason: 'user_not_found',
+      }),
+    );
   });
 });

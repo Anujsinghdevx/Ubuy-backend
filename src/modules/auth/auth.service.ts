@@ -11,6 +11,7 @@ import { ConfigService } from '@nestjs/config';
 import { OAuth2Client } from 'google-auth-library';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { MailService } from './mail.service';
+import { SecurityAuditService } from '@/common/security/security-audit.service';
 import { InjectModel } from '@nestjs/mongoose';
 import {
   Auction,
@@ -18,6 +19,9 @@ import {
 } from '@/modules/auctions/schemas/auction.schema';
 import { Bid, BidDocument } from '@/modules/bids/schemas/bid.schema';
 import { Model, Types } from 'mongoose';
+
+const MAX_FAILED_LOGIN_ATTEMPTS = 5;
+const LOGIN_LOCK_WINDOW_MS = 15 * 60 * 1000;
 
 @Injectable()
 export class AuthService {
@@ -29,6 +33,7 @@ export class AuthService {
     private usersService: UsersService,
     private configService: ConfigService,
     private mailService: MailService,
+    private securityAuditService: SecurityAuditService,
     @InjectModel(Auction.name)
     private auctionModel: Model<AuctionDocument>,
     @InjectModel(Bid.name)
@@ -70,6 +75,32 @@ export class AuthService {
     }
 
     return this.googleClient;
+  }
+
+  private auditAuthEvent(
+    action: string,
+    outcome: 'success' | 'failure' | 'attempted' | 'blocked',
+    details: {
+      email?: string;
+      userId?: string;
+      reason?: string;
+      metadata?: Record<string, unknown>;
+    } = {},
+  ) {
+    this.securityAuditService.logEvent({
+      domain: 'auth',
+      action,
+      outcome,
+      target:
+        details.email || details.userId
+          ? {
+              email: details.email,
+              userId: details.userId,
+            }
+          : undefined,
+      reason: details.reason,
+      metadata: details.metadata,
+    });
   }
 
   generateVerificationCode(): string {
@@ -215,6 +246,10 @@ export class AuthService {
     const user = await this.usersService.findById(userId);
 
     if (!user) {
+      this.auditAuthEvent('update_profile', 'failure', {
+        userId,
+        reason: 'user_not_found',
+      });
       throw new BadRequestException('User not found');
     }
 
@@ -224,6 +259,11 @@ export class AuthService {
       );
 
       if (existingUser && String(existingUser._id) !== userId) {
+        this.auditAuthEvent('update_profile', 'failure', {
+          userId,
+          reason: 'username_taken',
+          metadata: { username: body.username },
+        });
         throw new BadRequestException('Username is already taken');
       }
     }
@@ -235,8 +275,21 @@ export class AuthService {
     });
 
     if (!updatedUser) {
+      this.auditAuthEvent('update_profile', 'failure', {
+        userId,
+        reason: 'update_failed',
+      });
       throw new BadRequestException('Unable to update profile');
     }
+
+    this.auditAuthEvent('update_profile', 'success', {
+      userId,
+      email: updatedUser.email,
+      metadata: {
+        username: updatedUser.username,
+        hasImage: Boolean(updatedUser.image),
+      },
+    });
 
     return {
       message: 'Profile updated successfully',
@@ -254,22 +307,46 @@ export class AuthService {
     const user = await this.usersService.findByEmail(email);
 
     if (!user) {
+      this.auditAuthEvent('verify_email', 'failure', {
+        email,
+        reason: 'user_not_found',
+      });
       throw new BadRequestException('User not found');
     }
 
     if (user.isVerified) {
+      this.auditAuthEvent('verify_email', 'failure', {
+        email,
+        userId: String(user._id),
+        reason: 'already_verified',
+      });
       throw new BadRequestException('User already verified');
     }
 
     if (user.verificationCode !== code) {
+      this.auditAuthEvent('verify_email', 'failure', {
+        email,
+        userId: String(user._id),
+        reason: 'invalid_code',
+      });
       throw new BadRequestException('Invalid verification code');
     }
 
     if (!user.verificationCodeExpiry) {
+      this.auditAuthEvent('verify_email', 'failure', {
+        email,
+        userId: String(user._id),
+        reason: 'missing_expiry',
+      });
       throw new BadRequestException('Invalid verification code');
     }
 
     if (user.verificationCodeExpiry < new Date()) {
+      this.auditAuthEvent('verify_email', 'failure', {
+        email,
+        userId: String(user._id),
+        reason: 'code_expired',
+      });
       throw new BadRequestException('Code expired');
     }
 
@@ -278,6 +355,11 @@ export class AuthService {
     user.verificationCodeExpiry = undefined;
 
     await user.save();
+
+    this.auditAuthEvent('verify_email', 'success', {
+      email,
+      userId: String(user._id),
+    });
 
     return {
       message: 'Email verified successfully',
@@ -288,6 +370,11 @@ export class AuthService {
     const existingUser = await this.usersService.findByEmail(email);
 
     if (existingUser) {
+      this.auditAuthEvent('signup', 'failure', {
+        email,
+        reason: 'user_already_exists',
+        metadata: { username },
+      });
       throw new BadRequestException('User already exists');
     }
 
@@ -311,10 +398,19 @@ export class AuthService {
     try {
       await this.mailService.sendVerificationEmail(email, verificationCode);
       this.logger.log(`Verification email sent to ${email}`);
+      this.auditAuthEvent('signup', 'success', {
+        email,
+        metadata: { username, verified: false },
+      });
     } catch (error) {
       this.logger.error(
         `Failed to send verification email to ${email}: ${error instanceof Error ? error.message : 'Unknown error'}`,
       );
+      this.auditAuthEvent('signup', 'failure', {
+        email,
+        reason: 'verification_email_failed',
+        metadata: { username },
+      });
       throw new InternalServerErrorException(
         'User created but verification email could not be sent. Please try resend-code.',
       );
@@ -329,12 +425,21 @@ export class AuthService {
     const user = await this.usersService.findByEmail(email);
 
     if (!user) {
+      this.auditAuthEvent('forgot_password', 'attempted', {
+        email,
+        reason: 'account_not_found',
+      });
       return {
         message: 'If an account exists, a reset code has been sent.',
       };
     }
 
     if (user.provider === 'google' && !user.password) {
+      this.auditAuthEvent('forgot_password', 'blocked', {
+        email,
+        userId: String(user._id),
+        reason: 'google_account_without_password',
+      });
       throw new BadRequestException(
         'This account uses Google sign-in. Use Google to login.',
       );
@@ -349,10 +454,19 @@ export class AuthService {
         email,
         user.passwordResetCode,
       );
+      this.auditAuthEvent('forgot_password', 'success', {
+        email,
+        userId: String(user._id),
+      });
     } catch (error) {
       this.logger.error(
         `Failed to send password reset email to ${email}: ${error instanceof Error ? error.message : 'Unknown error'}`,
       );
+      this.auditAuthEvent('forgot_password', 'failure', {
+        email,
+        userId: String(user._id),
+        reason: 'password_reset_email_failed',
+      });
       throw new InternalServerErrorException(
         'Unable to send password reset code',
       );
@@ -370,11 +484,22 @@ export class AuthService {
     const user = await this.usersService.findByEmail(email);
 
     if (!user) {
+      this.auditAuthEvent('resend_code', 'failure', {
+        email,
+        reason: 'user_not_found',
+        metadata: { purpose },
+      });
       throw new BadRequestException('User not found');
     }
 
     if (purpose === 'email-verification') {
       if (user.isVerified) {
+        this.auditAuthEvent('resend_code', 'failure', {
+          email,
+          userId: String(user._id),
+          reason: 'already_verified',
+          metadata: { purpose },
+        });
         throw new BadRequestException('User already verified');
       }
 
@@ -387,10 +512,21 @@ export class AuthService {
           email,
           user.verificationCode,
         );
+        this.auditAuthEvent('resend_code', 'success', {
+          email,
+          userId: String(user._id),
+          metadata: { purpose },
+        });
       } catch (error) {
         this.logger.error(
           `Failed to resend verification email to ${email}: ${error instanceof Error ? error.message : 'Unknown error'}`,
         );
+        this.auditAuthEvent('resend_code', 'failure', {
+          email,
+          userId: String(user._id),
+          reason: 'verification_email_failed',
+          metadata: { purpose },
+        });
         throw new InternalServerErrorException(
           'Unable to resend verification code',
         );
@@ -402,6 +538,12 @@ export class AuthService {
     }
 
     if (user.provider === 'google' && !user.password) {
+      this.auditAuthEvent('resend_code', 'blocked', {
+        email,
+        userId: String(user._id),
+        reason: 'google_account_without_password',
+        metadata: { purpose },
+      });
       throw new BadRequestException(
         'This account uses Google sign-in. Use Google to login.',
       );
@@ -416,10 +558,21 @@ export class AuthService {
         email,
         user.passwordResetCode,
       );
+      this.auditAuthEvent('resend_code', 'success', {
+        email,
+        userId: String(user._id),
+        metadata: { purpose },
+      });
     } catch (error) {
       this.logger.error(
         `Failed to resend password reset email to ${email}: ${error instanceof Error ? error.message : 'Unknown error'}`,
       );
+      this.auditAuthEvent('resend_code', 'failure', {
+        email,
+        userId: String(user._id),
+        reason: 'password_reset_email_failed',
+        metadata: { purpose },
+      });
       throw new InternalServerErrorException(
         'Unable to resend password reset code',
       );
@@ -434,10 +587,19 @@ export class AuthService {
     const user = await this.usersService.findByEmail(email);
 
     if (!user) {
+      this.auditAuthEvent('verify_password_reset_code', 'failure', {
+        email,
+        reason: 'user_not_found',
+      });
       throw new BadRequestException('User not found');
     }
 
     if (user.passwordResetCode !== code) {
+      this.auditAuthEvent('verify_password_reset_code', 'failure', {
+        email,
+        userId: String(user._id),
+        reason: 'invalid_code',
+      });
       throw new BadRequestException('Invalid reset code');
     }
 
@@ -445,8 +607,18 @@ export class AuthService {
       !user.passwordResetCodeExpiry ||
       user.passwordResetCodeExpiry < new Date()
     ) {
+      this.auditAuthEvent('verify_password_reset_code', 'failure', {
+        email,
+        userId: String(user._id),
+        reason: 'code_expired',
+      });
       throw new BadRequestException('Reset code expired');
     }
+
+    this.auditAuthEvent('verify_password_reset_code', 'success', {
+      email,
+      userId: String(user._id),
+    });
 
     return {
       message: 'Reset code verified successfully',
@@ -458,10 +630,19 @@ export class AuthService {
     const user = await this.usersService.findByEmail(email);
 
     if (!user) {
+      this.auditAuthEvent('reset_password', 'failure', {
+        email,
+        reason: 'user_not_found',
+      });
       throw new BadRequestException('User not found');
     }
 
     if (user.passwordResetCode !== code) {
+      this.auditAuthEvent('reset_password', 'failure', {
+        email,
+        userId: String(user._id),
+        reason: 'invalid_code',
+      });
       throw new BadRequestException('Invalid reset code');
     }
 
@@ -469,6 +650,11 @@ export class AuthService {
       !user.passwordResetCodeExpiry ||
       user.passwordResetCodeExpiry < new Date()
     ) {
+      this.auditAuthEvent('reset_password', 'failure', {
+        email,
+        userId: String(user._id),
+        reason: 'code_expired',
+      });
       throw new BadRequestException('Reset code expired');
     }
 
@@ -477,6 +663,11 @@ export class AuthService {
     user.passwordResetCode = undefined;
     user.passwordResetCodeExpiry = undefined;
     await user.save();
+
+    this.auditAuthEvent('reset_password', 'success', {
+      email,
+      userId: String(user._id),
+    });
 
     return {
       message: 'Password reset successfully',
@@ -487,20 +678,90 @@ export class AuthService {
     const user = await this.usersService.findByEmail(email);
 
     if (!user) {
+      this.auditAuthEvent('login', 'failure', {
+        email,
+        reason: 'user_not_found',
+      });
       throw new BadRequestException('User not found');
     }
 
     if (!user.password) {
+      this.auditAuthEvent('login', 'failure', {
+        email,
+        userId: String(user._id),
+        reason: 'missing_password',
+      });
       throw new BadRequestException('Invalid credentials');
     }
+
+    if (user.lockedUntil && user.lockedUntil > new Date()) {
+      this.auditAuthEvent('login', 'blocked', {
+        email,
+        userId: String(user._id),
+        reason: 'account_temporarily_locked',
+        metadata: {
+          lockedUntil: user.lockedUntil.toISOString(),
+        },
+      });
+
+      throw new BadRequestException(
+        'Account is temporarily locked. Please try again later.',
+      );
+    }
+
     if (!user.isVerified) {
+      this.auditAuthEvent('login', 'blocked', {
+        email,
+        userId: String(user._id),
+        reason: 'email_not_verified',
+      });
       throw new BadRequestException('Please verify your email first');
     }
     const isMatch = await bcrypt.compare(password, user.password);
 
     if (!isMatch) {
+      const failedAttempts = (user.failedLoginAttempts ?? 0) + 1;
+      user.failedLoginAttempts = failedAttempts;
+
+      if (failedAttempts >= MAX_FAILED_LOGIN_ATTEMPTS) {
+        user.failedLoginAttempts = 0;
+        user.lockedUntil = new Date(Date.now() + LOGIN_LOCK_WINDOW_MS);
+
+        this.auditAuthEvent('login', 'blocked', {
+          email,
+          userId: String(user._id),
+          reason: 'too_many_failed_attempts',
+          metadata: {
+            lockWindowMs: LOGIN_LOCK_WINDOW_MS,
+            lockedUntil: user.lockedUntil.toISOString(),
+          },
+        });
+      } else {
+        this.auditAuthEvent('login', 'failure', {
+          email,
+          userId: String(user._id),
+          reason: 'invalid_credentials',
+          metadata: {
+            failedLoginAttempts: failedAttempts,
+            remainingBeforeLock: MAX_FAILED_LOGIN_ATTEMPTS - failedAttempts,
+          },
+        });
+      }
+
+      await user.save();
       throw new BadRequestException('Invalid credentials');
     }
+
+    if (user.failedLoginAttempts || user.lockedUntil) {
+      user.failedLoginAttempts = 0;
+      user.lockedUntil = undefined;
+      await user.save();
+    }
+
+    this.auditAuthEvent('login', 'success', {
+      email,
+      userId: String(user._id),
+    });
 
     return this.issueAccessToken(String(user._id), user.email);
   }
@@ -512,6 +773,9 @@ export class AuthService {
       this.logger.error(
         'Google auth attempted but GOOGLE_CLIENT_ID is not configured',
       );
+      this.auditAuthEvent('google_auth', 'blocked', {
+        reason: 'google_client_not_configured',
+      });
       throw new BadRequestException(
         'Google auth is not configured on server. Please contact support.',
       );
@@ -530,12 +794,19 @@ export class AuthService {
         error instanceof Error
           ? error.message
           : 'Google token verification failed';
+      this.auditAuthEvent('google_auth', 'failure', {
+        reason: 'token_verification_failed',
+        metadata: { message },
+      });
       throw new BadRequestException(`Invalid Google idToken: ${message}`);
     }
 
     const payload = ticket.getPayload();
 
     if (!payload) {
+      this.auditAuthEvent('google_auth', 'failure', {
+        reason: 'missing_payload',
+      });
       throw new BadRequestException('Invalid Google token payload');
     }
 
@@ -544,10 +815,17 @@ export class AuthService {
     const emailVerified = payload.email_verified;
 
     if (!googleId || !email) {
+      this.auditAuthEvent('google_auth', 'failure', {
+        reason: 'missing_identity_claims',
+      });
       throw new BadRequestException('Invalid Google token payload');
     }
 
     if (!emailVerified) {
+      this.auditAuthEvent('google_auth', 'blocked', {
+        email,
+        reason: 'email_not_verified',
+      });
       throw new BadRequestException('Google account email is not verified');
     }
 
@@ -567,6 +845,12 @@ export class AuthService {
           googleId,
           provider: 'google',
           isVerified: true,
+        });
+
+        this.auditAuthEvent('google_auth', 'success', {
+          email,
+          userId: String(createdUser._id),
+          metadata: { isNewUser: true },
         });
 
         return {
@@ -603,6 +887,12 @@ export class AuthService {
 
       await user.save();
 
+      this.auditAuthEvent('google_auth', 'success', {
+        email,
+        userId: String(user._id),
+        metadata: { isNewUser: false },
+      });
+
       return {
         ...this.issueAccessToken(String(user._id), user.email),
         isNewUser: false,
@@ -612,6 +902,10 @@ export class AuthService {
       const message =
         error instanceof Error ? error.message : 'Unknown Google auth error';
       this.logger.error(`Google auth persistence failed: ${message}`);
+      this.auditAuthEvent('google_auth', 'failure', {
+        reason: 'persistence_failed',
+        metadata: { message },
+      });
 
       if (error instanceof BadRequestException) {
         throw error;

@@ -51,7 +51,50 @@ async function bootstrap() {
     legacyHeaders: false,
   });
 
+  const authLoginLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 8,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: 'Too many login attempts. Please try again later.',
+  });
+
+  const authSignupLimiter = rateLimit({
+    windowMs: 60 * 60 * 1000,
+    max: 5,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: 'Too many signup attempts. Please try again later.',
+  });
+
+  const authRecoveryLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 10,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: 'Too many recovery attempts. Please try again later.',
+  });
+
+  const authLookupLimiter = rateLimit({
+    windowMs: 60 * 1000,
+    max: 30,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: 'Too many account lookup requests. Please try again later.',
+  });
+
   app.use('/uploads/images', uploadRateLimiter);
+
+  app.use('/v1/auth/login', authLoginLimiter);
+  app.use('/v1/auth/signup', authSignupLimiter);
+  app.use('/v1/auth/google', authLoginLimiter);
+  app.use('/v1/auth/forgot-password', authRecoveryLimiter);
+  app.use('/v1/auth/reset-password', authRecoveryLimiter);
+  app.use('/v1/auth/resend-code', authRecoveryLimiter);
+  app.use('/v1/auth/verify-email', authRecoveryLimiter);
+  app.use('/v1/auth/reset-code', authRecoveryLimiter);
+  app.use('/v1/auth/verify-code', authRecoveryLimiter);
+  app.use('/v1/auth/check-username-unique', authLookupLimiter);
 
   app.useGlobalPipes(
     new ValidationPipe({

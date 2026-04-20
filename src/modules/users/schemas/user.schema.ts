@@ -44,6 +44,12 @@ export class User {
   @Prop()
   passwordResetCodeExpiry?: Date;
 
+  @Prop({ default: 0 })
+  failedLoginAttempts!: number;
+
+  @Prop()
+  lockedUntil?: Date;
+
   createdAt?: Date;
 
   updatedAt?: Date;
