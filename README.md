@@ -126,6 +126,26 @@ For the complete testing strategy, commands, standards, CI recommendations, and 
 
 - [TESTING.md](TESTING.md)
 
+## Coverage Reports
+
+Run the suite-specific commands if you want separate reports for each test layer:
+
+- Unit: `npm run test:unit:cov`
+- Integration: `npm run test:integration:cov`
+- E2E: `npm run test:e2e:cov`
+- Smoke: `npm run test:smoke:cov`
+- Combined: `npm run test:all:cov`
+
+Each command writes its report to a separate folder:
+
+- [coverage/unit/lcov-report/index.html](coverage/unit/lcov-report/index.html)
+- [coverage/integration/lcov-report/index.html](coverage/integration/lcov-report/index.html)
+- [coverage/e2e/lcov-report/index.html](coverage/e2e/lcov-report/index.html)
+- [coverage/smoke/lcov-report/index.html](coverage/smoke/lcov-report/index.html)
+- [coverage/combined/lcov-report/index.html](coverage/combined/lcov-report/index.html)
+
+To view a report locally, open the matching `index.html` file in your browser or in VS Code. In GitHub Actions, download the uploaded artifact with the matching name and open the same file inside the artifact.
+
 ## Smoke Testing
 
 - Full smoke suite:

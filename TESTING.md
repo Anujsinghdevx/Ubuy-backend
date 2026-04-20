@@ -60,6 +60,10 @@ npm run test:unit
 npm run test:unit:cov
 ```
 
+Unit coverage report output:
+
+- `coverage/unit/lcov-report/index.html`
+
 ### 4.2 General Jest
 
 - Run all discovered tests:
@@ -75,6 +79,16 @@ npm test
 ```bash
 npm run test:integration
 ```
+
+- Integration coverage:
+
+```bash
+npm run test:integration:cov
+```
+
+Integration coverage report output:
+
+- `coverage/integration/lcov-report/index.html`
 
 - Included in local quality gate:
 
@@ -106,6 +120,16 @@ Integration suites currently cover:
 npm run test:smoke
 ```
 
+- Smoke coverage:
+
+```bash
+npm run test:smoke:cov
+```
+
+Smoke coverage report output:
+
+- `coverage/smoke/lcov-report/index.html`
+
 ### 4.5 E2E Tests
 
 - Core e2e suite (highest-value user journeys first):
@@ -119,6 +143,16 @@ npm run test:e2e:core
 ```bash
 npm run test:e2e
 ```
+
+- E2E coverage:
+
+```bash
+npm run test:e2e:cov
+```
+
+E2E coverage report output:
+
+- `coverage/e2e/lcov-report/index.html`
 
 Use `npm run test:e2e:core` for fastest high-value validation and `npm run test:e2e` for full e2e coverage.
 
@@ -250,6 +284,16 @@ Optional variables can affect specific flows (payment redirects, notifications, 
 
 Coverage should be evaluated primarily for unit tests.
 
+To generate a single combined coverage report from unit + integration + e2e + smoke tests:
+
+```bash
+npm run test:all:cov
+```
+
+The combined HTML report is generated at `coverage/combined/lcov-report/index.html`.
+
+For day-to-day debugging, prefer the suite-specific coverage commands. For release or team-wide visibility, use the combined coverage command.
+
 Recommended initial thresholds for unit suites:
 
 - Statements: 70%
@@ -275,8 +319,17 @@ Suggested nightly pipeline:
 
 1. npm ci
 2. npm run test:unit:cov
-3. npm run test:integration
-4. npm run test:smoke
+3. npm run test:integration:cov
+4. npm run test:e2e:cov
+5. npm run test:smoke:cov
+
+Suggested coverage publication:
+
+1. Unit coverage artifact: `coverage/unit/`
+2. Integration coverage artifact: `coverage/integration/`
+3. E2E coverage artifact: `coverage/e2e/`
+4. Smoke coverage artifact: `coverage/smoke/`
+5. Combined coverage artifact: `coverage/combined/`
 
 ## 11. Flakiness Prevention Checklist
 
@@ -289,6 +342,11 @@ Suggested nightly pipeline:
 ## 12. Troubleshooting
 
 Common issues and quick checks:
+
+- BullMQ eviction warning not shown in test logs:
+  - this is intentional via `test/jest.setup.ts`
+  - only this warning is suppressed: `IMPORTANT! Eviction policy is allkeys-lru. It should be "noeviction"`
+  - all other warnings/errors continue to be logged
 
 - Jest does not find tests:
   - verify file suffix is "*.spec.ts"

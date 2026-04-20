@@ -1,0 +1,73 @@
+name: Combined Coverage
+
+on:
+  pull_request:
+    branches:
+      - '**'
+  workflow_dispatch:
+
+jobs:
+  combined-coverage:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run combined test coverage
+        run: npm run test:all:cov
+
+      - name: Upload unit coverage artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-coverage-report
+          path: coverage/unit/
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Upload integration coverage artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: integration-coverage-report
+          path: coverage/integration/
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Upload e2e coverage artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-coverage-report
+          path: coverage/e2e/
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Upload smoke coverage artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-coverage-report
+          path: coverage/smoke/
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Upload combined coverage artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: combined-coverage-report
+          path: coverage/combined/
+          if-no-files-found: warn
+          retention-days: 14

@@ -1,0 +1,35 @@
+{
+  "moduleFileExtensions": ["js", "json", "ts"],
+  "rootDir": "..",
+  "testEnvironment": "node",
+  "testRegex": [
+    "src/.*\\.spec\\.ts$",
+    "test/integration/.*\\.integration-spec\\.ts$",
+    "test/e2e/.*\\.e2e-spec\\.ts$",
+    "test/smoke/.*\\.smoke-spec\\.ts$"
+  ],
+  "transform": {
+    "^.+\\.(t|j)s$": [
+      "ts-jest",
+      {
+        "tsconfig": "<rootDir>/tsconfig.test.json"
+      }
+    ]
+  },
+  "moduleNameMapper": {
+    "^@/(.*)$": "<rootDir>/src/$1"
+  },
+  "setupFilesAfterEnv": ["<rootDir>/test/jest.setup.ts"],
+  "collectCoverage": true,
+  "testTimeout": 30000,
+  "collectCoverageFrom": [
+    "src/**/*.ts",
+    "!src/main.ts",
+    "!src/**/*.module.ts",
+    "!src/**/*.dto.ts",
+    "!src/**/*.schema.ts"
+  ],
+  "coveragePathIgnorePatterns": ["<rootDir>/test/", "<rootDir>/dist/"],
+  "clearMocks": true,
+  "restoreMocks": true
+}

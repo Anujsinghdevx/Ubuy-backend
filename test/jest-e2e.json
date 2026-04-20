@@ -14,5 +14,6 @@
   "moduleNameMapper": {
     "^@/(.*)$": "<rootDir>/src/$1"
   },
+  "setupFilesAfterEnv": ["<rootDir>/test/jest.setup.ts"],
   "collectCoverage": false
 }

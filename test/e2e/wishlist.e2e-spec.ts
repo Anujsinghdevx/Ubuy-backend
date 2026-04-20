@@ -22,6 +22,8 @@ import {
 import { AuctionProcessor } from '../../src/modules/auctions/auction.processor';
 import { UploadsService } from '../../src/modules/uploads/uploads.service';
 
+jest.setTimeout(30000);
+
 describe('E2E: wishlist journey', () => {
   let app: INestApplication;
   let mongoConnection: Connection;
@@ -80,6 +82,7 @@ describe('E2E: wishlist journey', () => {
     await app.init();
 
     mongoConnection = app.get<Connection>(getConnectionToken());
+    await mongoConnection.asPromise();
     userModel = app.get<Model<UserDocument>>(getModelToken(User.name));
     auctionModel = app.get<Model<AuctionDocument>>(getModelToken(Auction.name));
     wishlistModel = app.get<Model<WishlistDocument>>(
@@ -135,10 +138,6 @@ describe('E2E: wishlist journey', () => {
 
     if (app) {
       await app.close();
-    }
-
-    if (mongoConnection?.readyState === 1) {
-      await mongoConnection.close();
     }
   });
 

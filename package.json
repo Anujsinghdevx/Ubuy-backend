@@ -15,11 +15,15 @@
     "test": "jest --passWithNoTests",
     "check:local": "npm run build && npm run prettier:check && npm run test:unit && npm run test:integration",
     "test:unit": "jest --config ./test/jest-unit.json --passWithNoTests",
-    "test:unit:cov": "jest --config ./test/jest-unit.json --coverage --runInBand",
+    "test:unit:cov": "jest --config ./test/jest-unit.json --coverage --coverageDirectory ./coverage/unit --runInBand",
     "test:integration": "jest --config ./test/jest-integration.json --runInBand",
+    "test:integration:cov": "jest --config ./test/jest-integration.json --coverage --coverageDirectory ./coverage/integration --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json --runInBand",
+    "test:e2e:cov": "jest --config ./test/jest-e2e.json --coverage --coverageDirectory ./coverage/e2e --runInBand",
     "test:e2e:core": "jest --config ./test/jest-e2e.json --runInBand --testPathPatterns=\"test/e2e/(auth-signup-verification|auth-profile|auction-bid-payment|auctions-permissions|bids-websocket|auction-payment-expiry-decision)\\.e2e-spec\\.ts$\"",
-    "test:smoke": "jest --config ./test/jest-smoke.json --runInBand"
+    "test:smoke": "jest --config ./test/jest-smoke.json --runInBand",
+    "test:smoke:cov": "jest --config ./test/jest-smoke.json --coverage --coverageDirectory ./coverage/smoke --runInBand",
+    "test:all:cov": "jest --config ./test/jest-all-coverage.json --coverageDirectory ./coverage/combined --runInBand"
   },
   "dependencies": {
     "@bull-board/api": "^6.20.6",
