@@ -9,7 +9,9 @@ import { FilesInterceptor } from '@nestjs/platform-express';
 import { JwtAuthGuard } from '@/modules/auth/guards/jwt-auth.guard';
 import { UploadsService } from './uploads.service';
 import {
+  ApiBody,
   ApiBearerAuth,
+  ApiConsumes,
   ApiOperation,
   ApiTags,
   ApiResponse,
@@ -36,6 +38,23 @@ export class UploadsController {
         'https://cloudinary.com/.../image1.jpg',
         'https://cloudinary.com/.../image2.jpg',
       ],
+    },
+  })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        files: {
+          type: 'array',
+          items: {
+            type: 'string',
+            format: 'binary',
+          },
+          description: 'Up to 5 image files (max 10MB each)',
+        },
+      },
+      required: ['files'],
     },
   })
   @Post('images')

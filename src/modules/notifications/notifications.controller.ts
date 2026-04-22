@@ -21,6 +21,8 @@ import {
 import {
   ApiBearerAuth,
   ApiOperation,
+  ApiParam,
+  ApiQuery,
   ApiTags,
   ApiResponse,
 } from '@nestjs/swagger';
@@ -48,6 +50,34 @@ export class NotificationsController {
       ],
       total: 5,
     },
+  })
+  @ApiQuery({
+    name: 'page',
+    required: false,
+    type: Number,
+    example: 1,
+    description: 'Page number (1-based)',
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    type: Number,
+    example: 20,
+    description: 'Page size',
+  })
+  @ApiQuery({
+    name: 'isRead',
+    required: false,
+    type: Boolean,
+    example: false,
+    description: 'Filter by read/unread notifications',
+  })
+  @ApiQuery({
+    name: 'type',
+    required: false,
+    enum: NOTIFICATION_TYPES,
+    example: 'bid',
+    description: 'Filter by notification type',
   })
   @Get()
   async list(
@@ -100,6 +130,11 @@ export class NotificationsController {
     status: 200,
     description: 'Notification marked as read',
     example: { success: true, id: '507f1f77bcf86cd799439011' },
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'Notification identifier',
+    example: '507f1f77bcf86cd799439011',
   })
   @Patch(':id/read')
   async markAsRead(
@@ -167,6 +202,11 @@ export class NotificationsController {
     status: 200,
     description: 'Notification deleted',
     example: { deleted: true, notificationId: '507f1f77bcf86cd799439011' },
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'Notification identifier',
+    example: '507f1f77bcf86cd799439011',
   })
   @Delete(':id')
   async deleteNotification(

@@ -32,6 +32,7 @@ import { MeResponseDto, MeUserDto } from './dto/me-response.dto';
 import {
   ApiBearerAuth,
   ApiOperation,
+  ApiParam,
   ApiTags,
   ApiResponse,
 } from '@nestjs/swagger';
@@ -203,6 +204,11 @@ export class AuthController {
       createdAt: '4 April 2026',
       stats: { totalBids: 12, auctionsCreated: 4, auctionsWon: 2 },
     },
+  })
+  @ApiParam({
+    name: 'username',
+    description: 'Public username (or user id) to fetch profile for',
+    example: 'johndoe',
   })
   @Get('public-profile/:username')
   async getPublicProfile(@Param() params: PublicProfileDto) {

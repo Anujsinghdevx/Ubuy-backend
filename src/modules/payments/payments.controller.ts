@@ -20,7 +20,9 @@ import {
 } from '@/common/decorators/current-user.decorator';
 import {
   ApiBearerAuth,
+  ApiHeader,
   ApiOperation,
+  ApiQuery,
   ApiTags,
   ApiResponse,
 } from '@nestjs/swagger';
@@ -59,6 +61,12 @@ export class PaymentsController {
     description: 'Webhook received and processed',
     example: { success: true, message: 'Webhook processed' },
   })
+  @ApiHeader({
+    name: 'x-webhook-secret',
+    required: false,
+    description: 'Webhook secret for callback authenticity validation',
+    example: 'your-webhook-secret',
+  })
   @Post('webhook')
   async paymentWebhook(
     @Body() body: PaymentWebhookDto,
@@ -73,6 +81,12 @@ export class PaymentsController {
     status: 200,
     description: 'Payment link status',
     example: { linkId: 'link_abc123def456', status: 'PAID', amount: 5500 },
+  })
+  @ApiQuery({
+    name: 'linkId',
+    required: true,
+    type: String,
+    example: 'link_abc123def456',
   })
   @Get('cashfree/verify')
   async verifyCashfreePayment(@Query() query: CashfreeVerifyQueryDto) {
@@ -117,6 +131,12 @@ export class PaymentsController {
       status: 'PAID',
       message: 'Payment link status fetched successfully',
     },
+  })
+  @ApiQuery({
+    name: 'linkId',
+    required: true,
+    type: String,
+    example: 'link_abc123def456',
   })
   @Get('payment-status')
   async getPaymentStatus(@Query() query: CashfreeVerifyQueryDto) {

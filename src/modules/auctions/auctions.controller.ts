@@ -22,6 +22,7 @@ import {
 import {
   ApiBearerAuth,
   ApiOperation,
+  ApiParam,
   ApiQuery,
   ApiTags,
   ApiResponse,
@@ -256,6 +257,11 @@ export class AuctionsController {
       auctionId: '507f1f77bcf86cd799439011',
     },
   })
+  @ApiParam({
+    name: 'id',
+    description: 'Auction identifier',
+    example: '507f1f77bcf86cd799439011',
+  })
   @UseGuards(JwtAuthGuard)
   @Post(':id/end')
   async endAuctionNow(
@@ -278,6 +284,11 @@ export class AuctionsController {
       message: 'Auction cancelled successfully',
       auctionId: '507f1f77bcf86cd799439011',
     },
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'Auction identifier',
+    example: '507f1f77bcf86cd799439011',
   })
   @UseGuards(JwtAuthGuard)
   @Post(':id/cancel')
@@ -302,6 +313,11 @@ export class AuctionsController {
       auctionId: '507f1f77bcf86cd799439011',
     },
   })
+  @ApiParam({
+    name: 'id',
+    description: 'Auction identifier',
+    example: '507f1f77bcf86cd799439011',
+  })
   @UseGuards(JwtAuthGuard)
   @Delete(':id')
   async deleteAuction(
@@ -324,6 +340,11 @@ export class AuctionsController {
       message: 'Payment confirmed',
       auctionId: '507f1f77bcf86cd799439011',
     },
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'Auction identifier',
+    example: '507f1f77bcf86cd799439011',
   })
   @UseGuards(JwtAuthGuard)
   @Post(':id/payment/confirm')
@@ -354,6 +375,11 @@ export class AuctionsController {
     },
   })
   @ApiResponse({ status: 400, description: 'Invalid bid or auction state' })
+  @ApiParam({
+    name: 'id',
+    description: 'Auction identifier',
+    example: '507f1f77bcf86cd799439011',
+  })
   @UseGuards(JwtAuthGuard)
   @Post(':id/bids')
   async placeAuctionBid(
@@ -387,6 +413,11 @@ export class AuctionsController {
     description: 'Decision processed',
     example: { message: 'Payment decision recorded', action: 'PUSH_NEXT' },
   })
+  @ApiParam({
+    name: 'id',
+    description: 'Auction identifier',
+    example: '507f1f77bcf86cd799439011',
+  })
   @UseGuards(JwtAuthGuard)
   @Post(':id/payment-expiry/decision')
   async handlePaymentExpiryDecision(
@@ -407,6 +438,11 @@ export class AuctionsController {
 
   @ApiOperation({ summary: 'Get top bidders for an auction' })
   @ApiQuery({ name: 'limit', required: false, type: Number, example: 5 })
+  @ApiParam({
+    name: 'id',
+    description: 'Auction identifier',
+    example: '507f1f77bcf86cd799439011',
+  })
   @ApiResponse({
     status: 200,
     description: 'Top bidders list',
@@ -447,6 +483,11 @@ export class AuctionsController {
       status: 'active',
       endTime: '2026-04-12T18:00:00Z',
     },
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'Auction identifier',
+    example: '507f1f77bcf86cd799439011',
   })
   @Get(':id')
   async getById(@Param('id') id: string) {
