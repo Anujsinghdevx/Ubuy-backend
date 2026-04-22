@@ -4,6 +4,22 @@ A scalable, production-ready backend for **Ubuy** - a real-time auction platform
 
 ---
 
+## Table of Contents
+
+- [Overview](#overview)
+- [Tech Stack](#tech-stack)
+- [Architecture](#architecture)
+- [Features](#features)
+- [Getting Started](#getting-started)
+- [Environment Variables](#environment-variables)
+- [Developer Commands](#developer-commands)
+- [API Documentation](#api-documentation)
+- [Testing](#testing)
+- [Coverage Reports](#coverage-reports)
+- [Smoke Testing](#smoke-testing)
+- [API Quick Check](#api-quick-check)
+- [WebSocket Events](#websocket-events)
+
 ## Overview
 Real-time auction system with live bidding, user management, queue-based auction ending, and health monitoring.
 
@@ -18,53 +34,141 @@ Real-time auction system with live bidding, user management, queue-based auction
 
 ---
 
-## High Level Design (HLD)
+## Architecture
 
-```
-Client (Web / Mobile)
-        |
-   API Gateway (NestJS)
-        |
- ---------------------------------
- | Auth | Auction | Bidding | WS |
- ---------------------------------
-        |
-   -------------------------
-   | MongoDB | Redis Cache |
-   -------------------------
-        |
-   Kafka (Future)
+### System Diagram
+
+```mermaid
+flowchart TB
+     subgraph Client["Client Applications"]
+          WEB[Web UI]
+          MOB[Mobile UI]
+     end
+
+     subgraph API["NestJS Backend"]
+          AUTH[Auth Module]
+          AUC[Auctions Module]
+          BID[Bids Module]
+          PAY[Payments Module]
+          NOTIF[Notifications Module]
+          UPLOAD[Uploads Module]
+          WS[Socket Gateway]
+          Q[Queue Workers BullMQ]
+     end
+
+     subgraph Data["Data and Infra"]
+          MDB[(MongoDB)]
+          REDIS[(Redis)]
+     end
+
+     subgraph External["External Services"]
+          CASHFREE[Cashfree]
+          CLOUDINARY[Cloudinary]
+          EMAIL[Email Provider]
+     end
+
+     WEB --> AUTH
+     WEB --> AUC
+     WEB --> BID
+     WEB --> PAY
+     WEB --> NOTIF
+     WEB --> UPLOAD
+
+     MOB --> AUTH
+     MOB --> AUC
+     MOB --> BID
+     MOB --> PAY
+     MOB --> NOTIF
+
+     BID --> WS
+     WS --> REDIS
+
+     AUTH --> MDB
+     AUC --> MDB
+     BID --> MDB
+     PAY --> MDB
+     NOTIF --> MDB
+
+     Q --> REDIS
+     Q --> MDB
+
+     PAY --> CASHFREE
+     UPLOAD --> CLOUDINARY
+     AUTH --> EMAIL
 ```
 
----
+### Data Flow: Real-Time Bid Placement
 
-## Low Level Design (LLD)
+```mermaid
+sequenceDiagram
+     autonumber
+     participant U as User
+     participant UI as Client UI
+     participant API as Auctions Controller
+     participant B as Bids Service
+     participant DB as MongoDB
+     participant R as Redis Adapter
+     participant WS as WebSocket Gateway
 
-### Auction Entity
-```
-id: string
-title: string
-basePrice: number
-currentBid: number
-ownerId: string
-endTime: Date
-```
-
-### Bid Entity
-```
-id: string
-auctionId: string
-userId: string
-amount: number
-timestamp: Date
+     U->>UI: Enter bid amount
+     UI->>API: POST /v1/auctions/{id}/bids
+     API->>B: validate user and bid amount
+     B->>DB: read auction and current highest bid
+     B->>DB: write new bid and update auction
+     DB-->>B: updated auction state
+     B->>WS: publish bid update event
+     WS->>R: fan-out across instances
+     WS-->>UI: newBid event
+     UI-->>U: Show latest bid and leaderboard
 ```
 
-### Bid Flow
-1. User emits `placeBid`
-2. Validate bid > currentBid
-3. Save bid in DB
-4. Update auction
-5. Emit `newBid` via WebSocket
+### Data Flow: Auction End and Payment Window
+
+```mermaid
+sequenceDiagram
+     autonumber
+     participant Q as BullMQ Worker
+     participant A as Auctions Service
+     participant DB as MongoDB
+     participant N as Notifications
+     participant P as Payments Service
+     participant CF as Cashfree
+
+     Q->>A: Process auction end job
+     A->>DB: Mark auction ended and resolve winner
+     A->>N: Notify winner and seller
+     A->>P: Create payment link for winner
+     P->>CF: Request payment link
+     CF-->>P: linkId and payment URL
+     P->>DB: Store payment metadata and expiry
+     P->>N: Send payment pending notification
+```
+
+### Data Flow: Signup to Authenticated Access
+
+```mermaid
+sequenceDiagram
+     autonumber
+     participant U as User
+     participant API as Auth Controller
+     participant S as Auth Service
+     participant DB as MongoDB
+     participant E as Email Provider
+
+     U->>API: POST /v1/auth/signup
+     API->>S: validate payload
+     S->>DB: create user (unverified)
+     S->>E: send verification code
+     E-->>U: verification email
+     U->>API: POST /v1/auth/verify-email
+     API->>S: verify code
+     S->>DB: mark email as verified
+     U->>API: POST /v1/auth/login
+     API->>S: verify credentials
+     S-->>U: JWT access token
+     U->>API: GET /v1/auth/me with Bearer token
+     API-->>U: profile payload
+```
 
 ---
 
@@ -111,7 +215,16 @@ src/
 
 ---
 
-## Setup
+## Getting Started
+
+### Prerequisites
+
+- Node.js 20+
+- npm 10+
+- MongoDB instance
+- Redis instance
+
+### Local Setup
 
 ```bash
 git clone https://github.com/Anujsinghdevx/Ubuy-backend.git
@@ -120,13 +233,63 @@ npm install
 npm run start:dev
 ```
 
+By default, the application starts on port 6000 unless `PORT` is set.
+
+---
+
+## Environment Variables
+
+For local development and deployment, set at least:
+
+- `MONGO_URI`
+- `REDIS_URL` for Render Redis or another hosted Redis instance
+- `JWT_SECRET`
+- `PAYMENT_WEBHOOK_SECRET` for validating incoming payment webhooks
+- `PORT` is provided by Render in production, but can default locally
+- `ENABLE_ADMIN_TOOLS=true` only when you want Swagger and the BullMQ dashboard exposed in production
+- `FRONTEND_BASE_URL` optional, used to auto-build payment return URL fallback
+- `PAYMENT_RETURN_URL` optional, explicit fallback redirect URL after payment
+- `PAYMENT_NOTIFY_URL` optional, explicit fallback webhook notify URL sent to payment provider
+
+For secret rotation freshness automation in CI, set repository variables:
+
+- `JWT_SECRET_ROTATED_AT` in `YYYY-MM-DD` format
+- `PAYMENT_WEBHOOK_SECRET_ROTATED_AT` in `YYYY-MM-DD` format
+
+---
+
+## Developer Commands
+
+| Command | Purpose |
+|---|---|
+| `npm run start:dev` | Run API in watch mode |
+| `npm run build` | Compile NestJS app |
+| `npm run lint` | Run ESLint with autofix |
+| `npm run check:local` | Build + prettier check + unit + integration |
+| `npm run test:unit` | Run unit tests |
+| `npm run test:integration` | Run integration tests |
+| `npm run test:e2e` | Run e2e tests |
+| `npm run test:smoke` | Run smoke tests |
+| `npm run test:all:cov` | Generate combined coverage |
+| `npm run security:audit` | Run npm audit at high severity threshold |
+
+---
+
+## API Documentation
+
+- Swagger UI: `/docs`
+- OpenAPI JSON: `/docs-json`
+- BullMQ dashboard: `/admin/queues`
+
+Notes:
+- Swagger and BullMQ dashboard are available outside production by default.
+- In production, expose them only when `ENABLE_ADMIN_TOOLS=true`.
+
 ## Testing
 
 For the complete testing strategy, commands, standards, CI recommendations, and troubleshooting, see:
 
 - [TESTING.md](TESTING.md)
-- [PRODUCTION_READINESS.md](PRODUCTION_READINESS.md)
-- [SECURITY_RUNBOOK.md](SECURITY_RUNBOOK.md)
 
 ## Coverage Reports
 
@@ -172,38 +335,19 @@ Uses external secrets (`MONGO_URI`, `REDIS_URL`, `JWT_SECRET`) from repository s
 Runs on push commits and manual dispatch, supports choosing core or full suite.
 Uses GitHub Actions service containers (MongoDB + Redis) and does not require external runtime secrets.
 
-## Environment Variables
-
-For local development and Render deployment, set at least:
-
-- `MONGO_URI`
-- `REDIS_URL` for Render Redis or another hosted Redis instance
-- `JWT_SECRET`
-- `PAYMENT_WEBHOOK_SECRET` for validating incoming payment webhooks
-- `PORT` is provided by Render in production, but can default locally
-- `ENABLE_ADMIN_TOOLS=true` only when you want Swagger and the BullMQ dashboard exposed in production
-- `FRONTEND_BASE_URL` optional, used to auto-build payment return URL fallback
-- `PAYMENT_RETURN_URL` optional, explicit fallback redirect URL after payment
-- `PAYMENT_NOTIFY_URL` optional, explicit fallback webhook notify URL sent to payment provider
-
-For secret rotation freshness automation in CI, set repository variables:
-
-- `JWT_SECRET_ROTATED_AT` in `YYYY-MM-DD` format
-- `PAYMENT_WEBHOOK_SECRET_ROTATED_AT` in `YYYY-MM-DD` format
-
 ---
 
 ## API Quick Check
 - `GET /` -> service runtime status
 - `GET /health` -> backend, MongoDB, Redis, config, memory checks
-- `POST /auth/signup`
-- `POST /auth/login`
-- `POST /auth/verify-email`
-- `GET /auth/me` (JWT required)
-- `POST /auctions` (JWT required)
-- `GET /auctions`
-- `GET /auctions/active`
-- `GET /auctions/:id`
+- `POST /v1/auth/signup`
+- `POST /v1/auth/login`
+- `POST /v1/auth/verify-email`
+- `GET /v1/auth/me` (JWT required)
+- `POST /v1/auctions` (JWT required)
+- `GET /v1/auctions`
+- `GET /v1/auctions/active`
+- `GET /v1/auctions/:id`
 
 ---
 
