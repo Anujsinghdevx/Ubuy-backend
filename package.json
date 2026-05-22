@@ -24,6 +24,7 @@
     "test:smoke": "jest --config ./test/jest-smoke.json --runInBand",
     "test:smoke:cov": "jest --config ./test/jest-smoke.json --coverage --coverageDirectory ./coverage/smoke --runInBand",
     "test:all:cov": "jest --config ./test/jest-all-coverage.json --coverageDirectory ./coverage/combined --runInBand",
+    "test:mutation": "stryker run",
     "infra:local:up": "docker compose -f ./docker-compose.local.yml up -d",
     "infra:local:down": "docker compose -f ./docker-compose.local.yml down",
     "infra:local:logs": "docker compose -f ./docker-compose.local.yml logs -f --tail=100",
@@ -32,6 +33,9 @@
     "load:test:1k": "node ./scripts/run-k6.js ./load-tests/scenarios/public-read-1k.js",
     "load:test:quick": "node ./scripts/run-k6.js ./load-tests/scenarios/public-read.js --vus 3 --duration 10s",
     "load:test:1k:quick": "node ./scripts/run-k6.js ./load-tests/scenarios/public-read-1k-fast.js",
+    "load:test:soak": "node ./scripts/run-k6.js ./load-tests/scenarios/public-read-soak.js",
+    "load:test:spike": "node ./scripts/run-k6.js ./load-tests/scenarios/public-read-spike.js",
+    "demo:run": "node ./scripts/demo-runner.js",
     "security:audit": "npm audit --audit-level=high"
   },
   "dependencies": {
@@ -74,6 +78,10 @@
     "@nestjs/cli": "^11.0.0",
     "@nestjs/schematics": "^11.0.0",
     "@nestjs/testing": "^11.0.1",
+    "@stryker-mutator/core": "^9.6.1",
+    "@stryker-mutator/html-reporter": "^3.1.0",
+    "@stryker-mutator/jest-runner": "^9.6.1",
+    "@stryker-mutator/typescript": "^4.0.0",
     "@types/bcrypt": "^6.0.0",
     "@types/express": "^5.0.0",
     "@types/jest": "^30.0.0",
