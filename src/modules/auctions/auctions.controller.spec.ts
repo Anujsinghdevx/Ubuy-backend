@@ -50,7 +50,7 @@ describe('AuctionsController', () => {
     auctionsService.findAll.mockResolvedValue({ data: [] });
 
     await expect(controller.getAll('2', '10')).resolves.toEqual({ data: [] });
-    expect(auctionsService.findAll).toHaveBeenCalledWith(2, 10);
+    expect(auctionsService.findAll).toHaveBeenCalledWith(2, 10, true, false);
   });
 
   it('should reject invalid bid errors as bad request', async () => {
