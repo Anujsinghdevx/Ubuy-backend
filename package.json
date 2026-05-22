@@ -24,6 +24,14 @@
     "test:smoke": "jest --config ./test/jest-smoke.json --runInBand",
     "test:smoke:cov": "jest --config ./test/jest-smoke.json --coverage --coverageDirectory ./coverage/smoke --runInBand",
     "test:all:cov": "jest --config ./test/jest-all-coverage.json --coverageDirectory ./coverage/combined --runInBand",
+    "infra:local:up": "docker compose -f ./docker-compose.local.yml up -d",
+    "infra:local:down": "docker compose -f ./docker-compose.local.yml down",
+    "infra:local:logs": "docker compose -f ./docker-compose.local.yml logs -f --tail=100",
+    "start:dev:loadtest": "node ./scripts/run-with-env.js ./.env.loadtest.local npm run start:dev",
+    "load:test": "node ./scripts/run-k6.js ./load-tests/scenarios/public-read.js",
+    "load:test:1k": "node ./scripts/run-k6.js ./load-tests/scenarios/public-read-1k.js",
+    "load:test:quick": "node ./scripts/run-k6.js ./load-tests/scenarios/public-read.js --vus 3 --duration 10s",
+    "load:test:1k:quick": "node ./scripts/run-k6.js ./load-tests/scenarios/public-read-1k-fast.js",
     "security:audit": "npm audit --audit-level=high"
   },
   "dependencies": {

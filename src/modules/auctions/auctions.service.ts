@@ -21,6 +21,42 @@ const PAYMENT_EXPIRY_DELAY_MS = 24 * 60 * 60 * 1000;
 @Injectable()
 export class AuctionsService {
   private readonly logger = new Logger(AuctionsService.name);
+  private readonly auctionListProjectionFull =
+    'title currentPrice status startTime endTime category createdBy highestBidder winner notified paymentStatus paymentDueAt createdAt updatedAt';
+  private readonly auctionListProjectionCompact =
+    'title currentPrice status endTime category createdAt';
+  private readonly countCacheTtlMs = 5000;
+  private readonly listResponseCacheTtlMs = Number(
+    process.env.AUCTIONS_LIST_CACHE_TTL_MS ?? 2000,
+  );
+  private readonly countCache = new Map<
+    string,
+    {
+      value?: number;
+      expiresAt: number;
+      pending?: Promise<number>;
+    }
+  >();
+  private readonly listResponseCache = new Map<
+    string,
+    {
+      value?: {
+        page: number;
+        limit: number;
+        total: number | null;
+        totalPages: number | null;
+        data: unknown[];
+      };
+      expiresAt: number;
+      pending?: Promise<{
+        page: number;
+        limit: number;
+        total: number | null;
+        totalPages: number | null;
+        data: unknown[];
+      }>;
+    }
+  >();
 
   private normalizePagination(page?: number, limit?: number) {
     const normalizedPage = Math.max(1, page ?? 1);
@@ -31,6 +67,127 @@ export class AuctionsService {
       limit: normalizedLimit,
       skip: (normalizedPage - 1) * normalizedLimit,
     };
+  }
+
+  private async getCachedCount(
+    key: string,
+    countFn: () => Promise<number>,
+  ): Promise<number> {
+    const now = Date.now();
+    const cachedEntry = this.countCache.get(key);
+
+    if (cachedEntry?.pending) {
+      return cachedEntry.pending;
+    }
+
+    if (cachedEntry && cachedEntry.expiresAt > now && cachedEntry.value !== undefined) {
+      return cachedEntry.value;
+    }
+
+    const pending = countFn()
+      .then((value) => {
+        this.countCache.set(key, {
+          value,
+          expiresAt: Date.now() + this.countCacheTtlMs,
+        });
+
+        return value;
+      })
+      .catch((error) => {
+        const currentEntry = this.countCache.get(key);
+
+        if (currentEntry?.pending === pending) {
+          this.countCache.delete(key);
+        }
+
+        throw error;
+      });
+
+    this.countCache.set(key, {
+      value: cachedEntry?.value,
+      expiresAt: cachedEntry?.expiresAt ?? 0,
+      pending,
+    });
+
+    return pending;
+  }
+
+  private getAuctionListProjection(compact: boolean) {
+    return compact
+      ? this.auctionListProjectionCompact
+      : this.auctionListProjectionFull;
+  }
+
+  private shouldUseListResponseCache(
+    page: number,
+    includeMeta: boolean,
+    compact: boolean,
+  ) {
+    return (
+      this.listResponseCacheTtlMs > 0 &&
+      page === 1 &&
+      includeMeta === false &&
+      compact === true
+    );
+  }
+
+  private getListResponseCacheKey(
+    scope: 'all' | 'active' | 'category',
+    page: number,
+    limit: number,
+    category?: string,
+  ) {
+    const suffix = category ? `:${category.toLowerCase()}` : '';
+    return `auctions:list:${scope}:${page}:${limit}${suffix}`;
+  }
+
+  private async getCachedListResponse(
+    key: string,
+    fetchFn: () => Promise<{
+      page: number;
+      limit: number;
+      total: number | null;
+      totalPages: number | null;
+      data: unknown[];
+    }>,
+  ) {
+    const now = Date.now();
+    const cachedEntry = this.listResponseCache.get(key);
+
+    if (cachedEntry?.pending) {
+      return cachedEntry.pending;
+    }
+
+    if (cachedEntry && cachedEntry.expiresAt > now && cachedEntry.value) {
+      return cachedEntry.value;
+    }
+
+    const pending = fetchFn()
+      .then((value) => {
+        this.listResponseCache.set(key, {
+          value,
+          expiresAt: Date.now() + this.listResponseCacheTtlMs,
+        });
+
+        return value;
+      })
+      .catch((error) => {
+        const currentEntry = this.listResponseCache.get(key);
+
+        if (currentEntry?.pending === pending) {
+          this.listResponseCache.delete(key);
+        }
+
+        throw error;
+      });
+
+    this.listResponseCache.set(key, {
+      value: cachedEntry?.value,
+      expiresAt: cachedEntry?.expiresAt ?? 0,
+      pending,
+    });
+
+    return pending;
   }
 
   constructor(
@@ -912,53 +1069,117 @@ export class AuctionsService {
     };
   }
 
-  async findAll(page?: number, limit?: number) {
+  async findAll(
+    page?: number,
+    limit?: number,
+    includeMeta = true,
+    compact = false,
+  ) {
     const pagination = this.normalizePagination(page, limit);
-
-    const [data, total] = await Promise.all([
-      this.auctionModel
+    const projection = this.getAuctionListProjection(compact);
+    const responseFetcher = async () => {
+      const data = await this.auctionModel
         .find()
+        .select(projection)
         .sort({ createdAt: -1 })
         .skip(pagination.skip)
-        .limit(pagination.limit),
-      this.auctionModel.countDocuments(),
-    ]);
+        .limit(pagination.limit)
+        .lean();
 
-    return {
-      page: pagination.page,
-      limit: pagination.limit,
-      total,
-      totalPages: Math.ceil(total / pagination.limit),
-      data,
+      const total = includeMeta
+        ? await this.getCachedCount('auctions:count:all', () =>
+            this.auctionModel.countDocuments(),
+          )
+        : null;
+
+      return {
+        page: pagination.page,
+        limit: pagination.limit,
+        total,
+        totalPages: total === null ? null : Math.ceil(total / pagination.limit),
+        data,
+      };
     };
+
+    if (
+      this.shouldUseListResponseCache(
+        pagination.page,
+        includeMeta,
+        compact,
+      )
+    ) {
+      return this.getCachedListResponse(
+        this.getListResponseCacheKey('all', pagination.page, pagination.limit),
+        responseFetcher,
+      );
+    }
+
+    return responseFetcher();
   }
 
   async findById(id: string) {
     return this.auctionModel.findById(id);
   }
 
-  async findActive(page?: number, limit?: number) {
+  async findActive(
+    page?: number,
+    limit?: number,
+    includeMeta = true,
+    compact = false,
+  ) {
     const pagination = this.normalizePagination(page, limit);
-
-    const [data, total] = await Promise.all([
-      this.auctionModel
+    const projection = this.getAuctionListProjection(compact);
+    const responseFetcher = async () => {
+      const data = await this.auctionModel
         .find({ status: 'ACTIVE' })
+        .select(projection)
         .sort({ createdAt: -1 })
         .skip(pagination.skip)
-        .limit(pagination.limit),
-      this.auctionModel.countDocuments({ status: 'ACTIVE' }),
-    ]);
+        .limit(pagination.limit)
+        .lean();
 
-    return {
-      page: pagination.page,
-      limit: pagination.limit,
-      total,
-      totalPages: Math.ceil(total / pagination.limit),
-      data,
+      const total = includeMeta
+        ? await this.getCachedCount('auctions:count:status:ACTIVE', () =>
+            this.auctionModel.countDocuments({ status: 'ACTIVE' }),
+          )
+        : null;
+
+      return {
+        page: pagination.page,
+        limit: pagination.limit,
+        total,
+        totalPages: total === null ? null : Math.ceil(total / pagination.limit),
+        data,
+      };
     };
+
+    if (
+      this.shouldUseListResponseCache(
+        pagination.page,
+        includeMeta,
+        compact,
+      )
+    ) {
+      return this.getCachedListResponse(
+        this.getListResponseCacheKey(
+          'active',
+          pagination.page,
+          pagination.limit,
+        ),
+        responseFetcher,
+      );
+    }
+
+    return responseFetcher();
   }
 
-  async findByCategory(category: string, page?: number, limit?: number) {
+  async findByCategory(
+    category: string,
+    page?: number,
+    limit?: number,
+    includeMeta = true,
+    compact = false,
+  ) {
     const normalizedCategory = category?.trim();
 
     if (!normalizedCategory) {
@@ -966,23 +1187,52 @@ export class AuctionsService {
     }
 
     const pagination = this.normalizePagination(page, limit);
-
-    const [data, total] = await Promise.all([
-      this.auctionModel
+    const projection = this.getAuctionListProjection(compact);
+    const responseFetcher = async () => {
+      const data = await this.auctionModel
         .find({ category: normalizedCategory })
+        .select(projection)
         .sort({ endTime: -1 })
         .skip(pagination.skip)
-        .limit(pagination.limit),
-      this.auctionModel.countDocuments({ category: normalizedCategory }),
-    ]);
+        .limit(pagination.limit)
+        .lean();
 
-    return {
-      page: pagination.page,
-      limit: pagination.limit,
-      total,
-      totalPages: Math.ceil(total / pagination.limit),
-      data,
+      const total = includeMeta
+        ? await this.getCachedCount(
+            `auctions:count:category:${normalizedCategory.toLowerCase()}`,
+            () =>
+              this.auctionModel.countDocuments({ category: normalizedCategory }),
+          )
+        : null;
+
+      return {
+        page: pagination.page,
+        limit: pagination.limit,
+        total,
+        totalPages: total === null ? null : Math.ceil(total / pagination.limit),
+        data,
+      };
     };
+
+    if (
+      this.shouldUseListResponseCache(
+        pagination.page,
+        includeMeta,
+        compact,
+      )
+    ) {
+      return this.getCachedListResponse(
+        this.getListResponseCacheKey(
+          'category',
+          pagination.page,
+          pagination.limit,
+          normalizedCategory,
+        ),
+        responseFetcher,
+      );
+    }
+
+    return responseFetcher();
   }
 
   async findCreatedByUser(userId: string, page?: number, limit?: number) {
@@ -1006,8 +1256,11 @@ export class AuctionsService {
         .find({ createdBy: userId })
         .sort({ createdAt: -1 })
         .skip(pagination.skip)
-        .limit(pagination.limit),
-      this.auctionModel.countDocuments({ createdBy: userId }),
+        .limit(pagination.limit)
+        .lean(),
+      this.getCachedCount(`auctions:count:createdBy:${userId}`, () =>
+        this.auctionModel.countDocuments({ createdBy: userId }),
+      ),
     ]);
 
     return {

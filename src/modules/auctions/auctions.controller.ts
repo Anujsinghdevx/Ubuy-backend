@@ -64,6 +64,18 @@ export class AuctionsController {
   @ApiOperation({ summary: 'List all auctions' })
   @ApiQuery({ name: 'page', required: false, type: Number, example: 1 })
   @ApiQuery({ name: 'limit', required: false, type: Number, example: 20 })
+  @ApiQuery({
+    name: 'includeMeta',
+    required: false,
+    type: Boolean,
+    example: true,
+  })
+  @ApiQuery({
+    name: 'compact',
+    required: false,
+    type: Boolean,
+    example: false,
+  })
   @ApiResponse({
     status: 200,
     description: 'All auctions retrieved',
@@ -83,19 +95,38 @@ export class AuctionsController {
     },
   })
   @Get()
-  async getAll(@Query('page') page?: string, @Query('limit') limit?: string) {
+  async getAll(
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+    @Query('includeMeta') includeMeta?: string,
+    @Query('compact') compact?: string,
+  ) {
     const pageNumber = page ? Number(page) : undefined;
     const limitNumber = limit ? Number(limit) : undefined;
 
     return this.auctionsService.findAll(
       Number.isFinite(pageNumber) ? pageNumber : undefined,
       Number.isFinite(limitNumber) ? limitNumber : undefined,
+      includeMeta !== 'false',
+      compact === 'true',
     );
   }
 
   @ApiOperation({ summary: 'List active auctions' })
   @ApiQuery({ name: 'page', required: false, type: Number, example: 1 })
   @ApiQuery({ name: 'limit', required: false, type: Number, example: 20 })
+  @ApiQuery({
+    name: 'includeMeta',
+    required: false,
+    type: Boolean,
+    example: true,
+  })
+  @ApiQuery({
+    name: 'compact',
+    required: false,
+    type: Boolean,
+    example: false,
+  })
   @ApiResponse({
     status: 200,
     description: 'Active auctions only',
@@ -117,6 +148,8 @@ export class AuctionsController {
   async getActive(
     @Query('page') page?: string,
     @Query('limit') limit?: string,
+    @Query('includeMeta') includeMeta?: string,
+    @Query('compact') compact?: string,
   ) {
     const pageNumber = page ? Number(page) : undefined;
     const limitNumber = limit ? Number(limit) : undefined;
@@ -124,6 +157,8 @@ export class AuctionsController {
     return this.auctionsService.findActive(
       Number.isFinite(pageNumber) ? pageNumber : undefined,
       Number.isFinite(limitNumber) ? limitNumber : undefined,
+      includeMeta !== 'false',
+      compact === 'true',
     );
   }
 
@@ -136,6 +171,18 @@ export class AuctionsController {
   })
   @ApiQuery({ name: 'page', required: false, type: Number, example: 1 })
   @ApiQuery({ name: 'limit', required: false, type: Number, example: 20 })
+  @ApiQuery({
+    name: 'includeMeta',
+    required: false,
+    type: Boolean,
+    example: true,
+  })
+  @ApiQuery({
+    name: 'compact',
+    required: false,
+    type: Boolean,
+    example: false,
+  })
   @ApiResponse({
     status: 200,
     description: 'Category auctions',
@@ -146,6 +193,8 @@ export class AuctionsController {
     @Query('category') category?: string,
     @Query('page') page?: string,
     @Query('limit') limit?: string,
+    @Query('includeMeta') includeMeta?: string,
+    @Query('compact') compact?: string,
   ) {
     const pageNumber = page ? Number(page) : undefined;
     const limitNumber = limit ? Number(limit) : undefined;
@@ -154,6 +203,8 @@ export class AuctionsController {
       category ?? '',
       Number.isFinite(pageNumber) ? pageNumber : undefined,
       Number.isFinite(limitNumber) ? limitNumber : undefined,
+      includeMeta !== 'false',
+      compact === 'true',
     );
   }
 

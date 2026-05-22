@@ -1,0 +1,16 @@
+k6 1k run summary (text capture)
+
+Total requests: 463,831
+Iterations: 463,830
+Throughput: ~643.66 req/s
+Avg latency: 2.92 ms
+p90: 6.54 ms
+p95: 10.2 ms
+p99: ~23.4 ms
+Max latency: ~59.68 ms
+HTTP failures: 0.00%
+Checks succeeded: 463,832
+Data received: ~1.9 GB
+Data sent: ~74 MB
+
+(If you want the raw k6 JSON metrics file, I can re-run with --out=json=... to produce it.)

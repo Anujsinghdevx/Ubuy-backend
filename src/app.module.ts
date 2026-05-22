@@ -20,13 +20,22 @@ import { ObservabilityModule } from '@/common/observability/observability.module
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: '.env',
+      envFilePath: process.env.ENV_FILE
+        ? [process.env.ENV_FILE, '.env']
+        : '.env',
     }),
     MongooseModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => ({
         uri: configService.get<string>('MONGO_URI'),
+        maxPoolSize: Number(
+          configService.get<string>('MONGO_MAX_POOL_SIZE') ?? '120',
+        ),
+        minPoolSize: Number(
+          configService.get<string>('MONGO_MIN_POOL_SIZE') ?? '20',
+        ),
+        socketTimeoutMS: 45000,
       }),
     }),
     AuthModule,

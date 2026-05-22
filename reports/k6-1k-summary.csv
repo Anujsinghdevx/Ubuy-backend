@@ -1,0 +1,14 @@
+metric,value
+total_requests,463831
+throughput_req_s,643.659084
+http_req_failed_rate,0.00
+avg_ms,2.92
+p90_ms,6.54
+p95_ms,10.2
+p99_ms,23.47
+max_ms,59.68
+data_received,1.9 GB
+data_sent,74 MB
+checks_total,463832
+checks_succeeded,463832
+checks_failed,0

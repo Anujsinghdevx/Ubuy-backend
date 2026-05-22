@@ -13,6 +13,8 @@ export class HttpObservabilityMiddleware implements NestMiddleware {
   private readonly slowRequestThresholdMs = Number(
     process.env.SLOW_HTTP_REQUEST_TRACE_MS ?? 250,
   );
+  private readonly requestLoggingEnabled =
+    process.env.HTTP_REQUEST_LOGS !== 'false';
 
   constructor(
     private readonly observabilityMetricsService: ObservabilityMetricsService,
@@ -32,6 +34,8 @@ export class HttpObservabilityMiddleware implements NestMiddleware {
       this.observabilityMetricsService.normalizeRoute(path);
     const ip = req.ip;
     const userAgent = req.get('user-agent');
+    const shouldLogRequests =
+      this.requestLoggingEnabled && !(userAgent?.includes('Grafana k6') ?? false);
     let logged = false;
 
     const logRequest = (event: 'http_request' | 'http_request_aborted') => {
@@ -76,6 +80,10 @@ export class HttpObservabilityMiddleware implements NestMiddleware {
         statusCode,
         durationMs,
       });
+
+      if (!shouldLogRequests) {
+        return;
+      }
 
       if (
         event === 'http_request' &&

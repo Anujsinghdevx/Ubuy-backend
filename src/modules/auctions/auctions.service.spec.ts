@@ -15,12 +15,26 @@ type MockFn = jest.Mock<any, any>;
 describe('AuctionsService', () => {
   let service: AuctionsService;
 
+  const createListQuery = () => {
+    const query = {
+      select: jest.fn().mockReturnThis(),
+      sort: jest.fn().mockReturnThis(),
+      skip: jest.fn().mockReturnThis(),
+      limit: jest.fn().mockReturnThis(),
+      lean: jest.fn().mockResolvedValue([{ _id: 'auction-1' }] as never),
+    };
+
+    return query;
+  };
+
   const auctionModel = {
     findById: jest.fn(),
+    find: jest.fn(),
     create: jest.fn(),
     deleteOne: jest.fn(),
     updateMany: jest.fn(),
     exists: jest.fn(),
+    countDocuments: jest.fn(),
   };
 
   const bidModel = {
@@ -220,6 +234,37 @@ describe('AuctionsService', () => {
     await expect(service.findByCategory('   ')).rejects.toBeInstanceOf(
       BadRequestException,
     );
+  });
+
+  it('should reuse cached count results for repeated list requests', async () => {
+    const query = createListQuery();
+    auctionModel.find.mockReturnValue(query as never);
+    auctionModel.countDocuments.mockResolvedValue(42 as never);
+
+    await service.findAll(1, 10);
+    await service.findAll(1, 10);
+
+    expect(auctionModel.countDocuments).toHaveBeenCalledTimes(1);
+  });
+
+  it('should reuse cached public list response for repeated compact requests', async () => {
+    const query = createListQuery();
+    auctionModel.find.mockReturnValue(query as never);
+
+    await service.findAll(1, 20, false, true);
+    await service.findAll(1, 20, false, true);
+
+    expect(auctionModel.find).toHaveBeenCalledTimes(1);
+  });
+
+  it('should reuse cached public active response for repeated compact requests', async () => {
+    const query = createListQuery();
+    auctionModel.find.mockReturnValue(query as never);
+
+    await service.findActive(1, 20, false, true);
+    await service.findActive(1, 20, false, true);
+
+    expect(auctionModel.find).toHaveBeenCalledTimes(1);
   });
 
   it('should return empty bidded auctions when user has no bids', async () => {

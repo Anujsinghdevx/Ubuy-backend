@@ -1,0 +1,30 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>k6 1k Load Test Report</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>body{font-family:sans-serif;margin:24px} canvas{max-width:900px}</style>
+</head>
+<body>
+  <h1>k6 1k Load Test Report</h1>
+  <p>Summary of the 1k VU run (12m)</p>
+  <canvas id="chart" width="900" height="350"></canvas>
+  <h2>Key numbers</h2>
+  <ul>
+    <li>Total requests: 463,831</li>
+    <li>Throughput: 643.66 req/s</li>
+    <li>Avg latency: 2.92 ms</li>
+    <li>p95 latency: 10.2 ms</li>
+    <li>Max latency: 59.68 ms</li>
+    <li>HTTP failures: 0.00%</li>
+    <li>Data received: 1.9 GB</li>
+  </ul>
+  <script>
+    const labels = ['avg','p90','p95','p99','max'];
+    const values = [2.92,6.54,10.2,23.47,59.68];
+    const ctx = document.getElementById('chart').getContext('2d');
+    new Chart(ctx,{type:'bar',data:{labels, datasets:[{label:'http_req_duration (ms)',data:values,backgroundColor:'rgba(54,162,235,0.6)'}]},options:{scales:{y:{beginAtZero:true}}}});
+  </script>
+</body>
+</html>

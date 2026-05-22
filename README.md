@@ -271,6 +271,11 @@ For secret rotation freshness automation in CI, set repository variables:
 | `npm run test:e2e` | Run e2e tests |
 | `npm run test:smoke` | Run smoke tests |
 | `npm run test:all:cov` | Generate combined coverage |
+| `npm run infra:local:up` | Start local MongoDB + Redis via Docker |
+| `npm run infra:local:down` | Stop local MongoDB + Redis |
+| `npm run start:dev:loadtest` | Run backend with `.env.loadtest.local` |
+| `npm run load:test` | Run baseline local load test (health + auctions) |
+| `npm run load:test:1k` | Run 1000-user ramp local load test |
 | `npm run security:audit` | Run npm audit at high severity threshold |
 
 ---
