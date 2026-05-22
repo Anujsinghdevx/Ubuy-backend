@@ -54,3 +54,12 @@ pids
 
 # Diagnostic reports (https://nodejs.org/api/report.html)
 report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
+
+# Stryker mutation testing sandboxes (temporary instrumented copies)
+.stryker-tmp/
+
+# Generated reports and load test outputs
+/reports/
+
+# Local loadtest env files
+.env.loadtest.local
