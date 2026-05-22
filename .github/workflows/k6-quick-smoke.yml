@@ -1,0 +1,46 @@
+name: k6 Quick Smoke
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main, master ]
+
+jobs:
+  k6-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install k6
+        run: |
+          sudo apt-get update && sudo apt-get install -y wget unzip
+          wget https://github.com/k6io/k6/releases/download/v0.45.0/k6-v0.45.0-linux-amd64.zip
+          unzip k6-v0.45.0-linux-amd64.zip && sudo cp k6 /usr/local/bin/
+
+      - name: Start infra (Mongo + Redis) via Docker Compose
+        run: |
+          docker compose -f ./docker-compose.local.yml up -d
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Start app
+        run: npm run start:dev &
+
+      - name: Wait for health
+        run: npx wait-on http://127.0.0.1:6000/health -t 300000
+
+      - name: Run k6 quick smoke
+        run: node ./scripts/run-k6.js ./load-tests/scenarios/public-read.js --vus 3 --duration 10s --out json=./reports/k6-quick-smoke.json --summary-export=./reports/k6-quick-smoke-summary.json
+
+      - name: Upload k6 report
+        uses: actions/upload-artifact@v4
+        with:
+          name: k6-quick-smoke-report
+          path: ./reports/k6-quick-smoke-summary.json

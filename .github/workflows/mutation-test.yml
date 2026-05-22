@@ -1,0 +1,32 @@
+name: Mutation Tests (Stryker)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main, master ]
+
+jobs:
+  stryker:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies (including Stryker)
+        run: |
+          npm ci
+          npm install --no-save --no-audit --no-fund --save-dev @stryker-mutator/core @stryker-mutator/jest-runner @stryker-mutator/typescript @stryker-mutator/html-reporter
+
+      - name: Run mutation tests
+        run: npm run test:mutation
+
+      - name: Upload Stryker report
+        uses: actions/upload-artifact@v4
+        with:
+          name: stryker-report
+          path: report
