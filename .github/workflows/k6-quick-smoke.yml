@@ -2,8 +2,6 @@ name: k6 Quick Smoke
 
 on:
   workflow_dispatch:
-  push:
-    branches: [ main, master ]
 
 jobs:
   k6-smoke:

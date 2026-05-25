@@ -20,7 +20,6 @@ A scalable, production-ready backend for **Ubuy** - a real-time auction platform
 - [API Quick Check](#api-quick-check)
 - [WebSocket Events](#websocket-events)
 
-- [CI Status](#ci-status)
 
 ## Overview
 Real-time auction system with live bidding, user management, queue-based auction ending, and health monitoring.
@@ -364,35 +363,6 @@ Uses GitHub Actions service containers (MongoDB + Redis) and does not require ex
 - placeBid
 - newBid
 - auctionEnded
-
-## Recording a short demo GIF (recommended)
-
-Use the terminal demo runner to capture a short terminal recording suitable for a GIF or screencast. The script queries health and auction lists and simulates activity:
-
-```bash
-# Start local infra and app first (see Getting Started)
-npm run infra:local:up
-npm run start:dev
-
-# In another terminal, run the demo runner
-npm run demo:run
-```
-
-Recording tools suggestions:
-- Linux/macOS: `asciinema` for terminal recordings, or `peek` for animated GIFs.
-- Windows: use `Peek` (https://github.com/phw/peek) or a screen-to-gif tool, then crop to the terminal area.
-
-Pro tip: run `npm run demo:run` and record ~10–20s of terminal output — then crop into a short GIF (3–7s) highlighting the health check and auction listing.
-
-## CI Status
-
-Badges (replace `Anujsinghdevx/Ubuy-backend` with your repo if different):
-
-- Build / Workflows (main): ![Build](https://github.com/Anujsinghdevx/Ubuy-backend/actions/workflows/coverage.yml/badge.svg)
-- k6 Quick Smoke: ![k6 Smoke](https://github.com/Anujsinghdevx/Ubuy-backend/actions/workflows/k6-quick-smoke.yml/badge.svg)
-- Mutation Tests: ![Mutation Tests](https://github.com/Anujsinghdevx/Ubuy-backend/actions/workflows/mutation-test.yml/badge.svg)
-
-Coverage artifacts and k6 summaries are uploaded as workflow artifacts in the respective workflows. Download them from the Actions run for review.
 
 ---
 
