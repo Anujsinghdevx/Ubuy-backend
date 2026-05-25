@@ -36,6 +36,7 @@
     "load:test:soak": "node ./scripts/run-k6.js ./load-tests/scenarios/public-read-soak.js",
     "load:test:spike": "node ./scripts/run-k6.js ./load-tests/scenarios/public-read-spike.js",
     "demo:run": "node ./scripts/demo-runner.js",
+    "demo:start": "npm run infra:local:up && node ./scripts/seed-auctions.js && node -e \"console.log('Demo app will be available at http://localhost:8080')\" && npm run start:dev",
     "security:audit": "npm audit --audit-level=high"
   },
   "dependencies": {

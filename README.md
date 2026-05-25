@@ -234,7 +234,20 @@ npm install
 npm run start:dev
 ```
 
-By default, the application starts on port 6000 unless `PORT` is set.
+By default, the application starts on port 8080 unless `PORT` is set.
+
+For the full local demo flow, run:
+
+```bash
+npm run demo:start
+```
+
+Then open:
+
+```bash
+curl http://localhost:8080/
+curl http://localhost:8080/health
+```
 
 ---
 
@@ -264,6 +277,7 @@ For secret rotation freshness automation in CI, set repository variables:
 | Command | Purpose |
 |---|---|
 | `npm run start:dev` | Run API in watch mode |
+| `npm run demo:start` | Start local infra, seed demo data, and run the app |
 | `npm run build` | Compile NestJS app |
 | `npm run lint` | Run ESLint with autofix |
 | `npm run check:local` | Build + prettier check + unit + integration |
